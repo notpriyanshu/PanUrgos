@@ -4,8 +4,11 @@
 //   POST /redeem  {token}                    -> verifies the email, returns a short-lived download ticket
 //   GET  /file/:ticket                       -> streams the installer from the private R2 bucket
 //   GET  /stats   (Authorization: Bearer STATS_KEY) -> user and download counts
+//   GET  /auth/:provider?platform&notify&consent=1   -> Google / GitHub sign-in (instead of the email step)
+//   GET  /auth/:provider/callback                     -> takes the verified email, then the normal download link
 //
-// Stored: email, platform, notify choice, timestamps, hashed tokens, download rows. Nothing else.
+// Stored: email, platform, notify choice, sign-in method, timestamps, hashed tokens, download rows. Nothing else.
+// From Google/GitHub we read only the verified email address and discard their access token immediately.
 
 const PLATFORMS = { win: 'Windows', mac: 'macOS', linux: 'Linux' };
 const LINK_TTL = 30 * 60 * 1000;
@@ -34,6 +37,8 @@ export default {
         const body = await req.json().catch(() => ({}));
         return url.pathname === '/signup' ? await signup(env, ctx, body, json) : await redeem(env, body, json);
       }
+      const auth = /^\/auth\/(google|github)(\/callback)?$/.exec(url.pathname);
+      if (auth && req.method === 'GET') return auth[2] ? await oauthCallback(env, auth[1], url) : await oauthStart(env, req, auth[1], url);
       if (url.pathname.startsWith('/file/') && req.method === 'GET') return await file(env, url.pathname.slice(6));
       if (url.pathname === '/stats' && req.method === 'GET') return await stats(env, req);
       if (url.pathname === '/' || url.pathname === '/health') return json({ ok: true, service: 'panurgos-api' });
@@ -51,6 +56,7 @@ export default {
     const stale = `SELECT u.id FROM users u WHERE COALESCE((SELECT MAX(d.at) FROM downloads d WHERE d.user_id = u.id), u.created_at) < ?`;
     await env.DB.batch([
       env.DB.prepare('DELETE FROM tokens WHERE expires_at < ?').bind(now),
+      env.DB.prepare('DELETE FROM oauth_states WHERE expires_at < ?').bind(now),
       env.DB.prepare(`DELETE FROM tokens WHERE user_id IN (${stale})`).bind(cutoff),
       env.DB.prepare(`DELETE FROM downloads WHERE user_id IN (${stale})`).bind(cutoff),
       env.DB.prepare(`DELETE FROM users WHERE id IN (${stale})`).bind(cutoff)
@@ -71,8 +77,8 @@ async function signup(env, ctx, body, json) {
   const now = Date.now();
   const today = new Date(now).toISOString().slice(0, 10);
   await env.DB.prepare(
-    `INSERT INTO users (email, platform, notify_opt_in, created_at) VALUES (?, ?, ?, ?)
-     ON CONFLICT(email) DO UPDATE SET platform = excluded.platform, notify_opt_in = MAX(users.notify_opt_in, excluded.notify_opt_in)`
+    `INSERT INTO users (email, platform, notify_opt_in, created_at, via) VALUES (?, ?, ?, ?, 'email')
+     ON CONFLICT(email) DO UPDATE SET platform = excluded.platform, notify_opt_in = MAX(users.notify_opt_in, excluded.notify_opt_in), via = 'email'`
   ).bind(email, platform, notify, now).run();
   const user = await env.DB.prepare('SELECT id, last_sent_at, sends_day, sends_today FROM users WHERE email = ?').bind(email).first();
 
@@ -147,9 +153,92 @@ async function stats(env, req) {
     verified: (await one('SELECT COUNT(*) AS n FROM users WHERE verified_at IS NOT NULL')).n,
     downloads: (await one('SELECT COUNT(*) AS n FROM downloads')).n,
     byPlatform: await all('SELECT platform, COUNT(*) AS signups, SUM(verified_at IS NOT NULL) AS verified, SUM(notify_opt_in) AS notify FROM users GROUP BY platform'),
+    bySignIn: await all("SELECT COALESCE(via, 'email') AS via, COUNT(*) AS users FROM users GROUP BY 1"),
     downloadsByDay: await all("SELECT date(at / 1000, 'unixepoch') AS day, platform, COUNT(*) AS n FROM downloads GROUP BY day, platform ORDER BY day DESC LIMIT 90")
   };
   return new Response(JSON.stringify(body, null, 2), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+}
+
+// ---------------------------------------------------------------- Google / GitHub sign-in
+
+const OAUTH = {
+  google: {
+    authorize: 'https://accounts.google.com/o/oauth2/v2/auth',
+    scope: 'openid email',
+    id: (env) => env.GOOGLE_CLIENT_ID, secret: (env) => env.GOOGLE_CLIENT_SECRET,
+    extra: { prompt: 'select_account', access_type: 'online' },
+    async email(env, code, redirectUri) {
+      const tok = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ code, client_id: env.GOOGLE_CLIENT_ID, client_secret: env.GOOGLE_CLIENT_SECRET, redirect_uri: redirectUri, grant_type: 'authorization_code' })
+      }).then((r) => r.json());
+      if (!tok.access_token) return null;
+      const me = await fetch('https://openidconnect.googleapis.com/v1/userinfo', { headers: { Authorization: `Bearer ${tok.access_token}` } }).then((r) => r.json());
+      return me.email && me.email_verified === true ? me.email : null;
+    }
+  },
+  github: {
+    authorize: 'https://github.com/login/oauth/authorize',
+    scope: 'user:email',
+    id: (env) => env.GITHUB_CLIENT_ID, secret: (env) => env.GITHUB_CLIENT_SECRET,
+    extra: { allow_signup: 'true' },
+    async email(env, code, redirectUri) {
+      const tok = await fetch('https://github.com/login/oauth/access_token', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ client_id: env.GITHUB_CLIENT_ID, client_secret: env.GITHUB_CLIENT_SECRET, code, redirect_uri: redirectUri })
+      }).then((r) => r.json());
+      if (!tok.access_token) return null;
+      const list = await fetch('https://api.github.com/user/emails', {
+        headers: { Authorization: `Bearer ${tok.access_token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'panurgos-api' }
+      }).then((r) => r.json());
+      if (!Array.isArray(list)) return null;
+      const pick = list.find((e) => e.primary && e.verified) || list.find((e) => e.verified && !/noreply\.github\.com$/i.test(e.email));
+      return pick ? pick.email : null;
+    }
+  }
+};
+
+const back = (env, query) => Response.redirect(`${env.SITE_URL}/download/?${query}`, 302);
+
+async function oauthStart(env, req, provider, url) {
+  const p = OAUTH[provider];
+  if (!p.id(env) || !p.secret(env)) return back(env, 'e=unavailable');
+  if (!(await underLimit(env, req))) return back(env, 'e=busy');
+  const platform = url.searchParams.get('platform');
+  if (!PLATFORMS[platform] || url.searchParams.get('consent') !== '1') return Response.redirect(`${env.SITE_URL}/#download`, 302);
+  const state = randomToken();
+  await env.DB.prepare('INSERT INTO oauth_states (hash, provider, platform, notify, expires_at) VALUES (?, ?, ?, ?, ?)')
+    .bind(await sha256(state), provider, platform, url.searchParams.get('notify') === '1' ? 1 : 0, Date.now() + 10 * 60 * 1000).run();
+  const q = new URLSearchParams({ client_id: p.id(env), redirect_uri: `${env.API_URL}/auth/${provider}/callback`, scope: p.scope, state, response_type: 'code', ...p.extra });
+  return Response.redirect(`${p.authorize}?${q}`, 302);
+}
+
+async function oauthCallback(env, provider, url) {
+  const p = OAUTH[provider];
+  if (url.searchParams.get('error')) return back(env, 'e=denied');
+  const state = url.searchParams.get('state') || '', code = url.searchParams.get('code') || '';
+  if (!/^[A-Za-z0-9_-]{40,60}$/.test(state) || !code) return back(env, 'e=failed');
+  const now = Date.now();
+  const st = await env.DB.prepare('DELETE FROM oauth_states WHERE hash = ? AND provider = ? AND expires_at > ? RETURNING platform, notify')
+    .bind(await sha256(state), provider, now).first();
+  if (!st) return back(env, 'e=expired');
+
+  let email = null;
+  try { email = await p.email(env, code, `${env.API_URL}/auth/${provider}/callback`); } catch (e) { console.error('OAuth exchange failed', provider, e && e.message); }
+  if (!email) return back(env, 'e=noemail');
+  email = email.trim().toLowerCase();
+
+  await env.DB.prepare(
+    `INSERT INTO users (email, platform, notify_opt_in, created_at, verified_at, via) VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(email) DO UPDATE SET platform = excluded.platform, notify_opt_in = MAX(users.notify_opt_in, excluded.notify_opt_in),
+       verified_at = COALESCE(users.verified_at, excluded.verified_at), via = excluded.via`
+  ).bind(email, st.platform, st.notify, now, now, provider).run();
+  const user = await env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first();
+  // Hand over to the normal flow: a single-use link the download page redeems straight away.
+  const token = randomToken();
+  await env.DB.prepare('INSERT INTO tokens (hash, user_id, kind, platform, expires_at, uses_left) VALUES (?, ?, ?, ?, ?, 1)')
+    .bind(await sha256(token), user.id, 'link', st.platform, now + 5 * 60 * 1000).run();
+  return back(env, `t=${token}`);
 }
 
 // ---------------------------------------------------------------- email

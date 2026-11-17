@@ -8,7 +8,16 @@ CREATE TABLE IF NOT EXISTS users (
   verified_at   INTEGER,
   last_sent_at  INTEGER,                     -- cooldown for sign-in emails
   sends_day     TEXT,                        -- YYYY-MM-DD of the counter below
-  sends_today   INTEGER NOT NULL DEFAULT 0
+  sends_today   INTEGER NOT NULL DEFAULT 0,
+  via           TEXT                       -- how they last signed in: email | google | github
+);
+
+CREATE TABLE IF NOT EXISTS oauth_states (
+  hash       TEXT    PRIMARY KEY,
+  provider   TEXT    NOT NULL,
+  platform   TEXT    NOT NULL,
+  notify     INTEGER NOT NULL DEFAULT 0,
+  expires_at INTEGER NOT NULL
 );
 
 -- kind = 'link' (emailed, single use, 30 min) or 'file' (download ticket, few uses, 15 min)

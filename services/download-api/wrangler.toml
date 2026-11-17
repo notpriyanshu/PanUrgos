@@ -12,6 +12,10 @@ SITE_URL = "https://panurgos.com"
 ALLOWED_ORIGINS = "https://panurgos.com,https://www.panurgos.com"
 FROM_EMAIL = "PanUrgos <downloads@panurgos.com>"
 CONTACT_EMAIL = ""
+API_URL = "https://panurgos-api.panurgos-download-api.workers.dev"
+# Public OAuth client IDs (secrets GOOGLE_CLIENT_SECRET / GITHUB_CLIENT_SECRET are set with wrangler). Empty = that button is off.
+GOOGLE_CLIENT_ID = ""
+GITHUB_CLIENT_ID = ""
 # Installers in the private R2 bucket. A platform missing here is "coming soon".
 INSTALLERS = '{"win":{"key":"1.0.0/PanUrgos-Studio-Setup-1.0.0.exe","file":"PanUrgos-Studio-Setup-1.0.0.exe","version":"1.0.0"}}'
 
@@ -35,6 +39,7 @@ simple = { limit = 20, period = 60 }
 # Local development only.
 [env.dev.vars]
 SITE_URL = "http://127.0.0.1:4173"
+API_URL = "http://127.0.0.1:8787"
 ALLOWED_ORIGINS = "http://127.0.0.1:4173,http://localhost:4173"
 FROM_EMAIL = "PanUrgos <downloads@panurgos.com>"
 CONTACT_EMAIL = "privacy@example.test"

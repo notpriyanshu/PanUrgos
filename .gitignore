@@ -11,3 +11,4 @@ website/
 
 # Cloudflare local state
 .wrangler/
+.dev.vars
