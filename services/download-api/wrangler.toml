@@ -14,7 +14,7 @@ FROM_EMAIL = "PanUrgos <downloads@panurgos.com>"
 CONTACT_EMAIL = ""
 API_URL = "https://panurgos-api.panurgos-download-api.workers.dev"
 # Public OAuth client IDs (secrets GOOGLE_CLIENT_SECRET / GITHUB_CLIENT_SECRET are set with wrangler). Empty = that button is off.
-GOOGLE_CLIENT_ID = ""
+GOOGLE_CLIENT_ID = "409768074169-r58mf3m4364h5tefs3pg1jnk4r8iuh7f.apps.googleusercontent.com"
 GITHUB_CLIENT_ID = "Ov23liUKpLhuWcWZXoO9"
 # Installers in the private R2 bucket. A platform missing here is "coming soon".
 INSTALLERS = '{"win":{"key":"1.0.0/PanUrgos-Studio-Setup-1.0.0.exe","file":"PanUrgos-Studio-Setup-1.0.0.exe","version":"1.0.0"}}'
