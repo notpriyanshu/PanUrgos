@@ -17,7 +17,7 @@ API_URL = "https://panurgos-api.panurgos-download-api.workers.dev"
 GOOGLE_CLIENT_ID = "409768074169-r58mf3m4364h5tefs3pg1jnk4r8iuh7f.apps.googleusercontent.com"
 GITHUB_CLIENT_ID = "Ov23liUKpLhuWcWZXoO9"
 # Installers in the private R2 bucket. A platform missing here is "coming soon".
-INSTALLERS = '{"win":{"key":"1.0.0/PanUrgos-Studio-Setup-1.0.0.exe","file":"PanUrgos-Studio-Setup-1.0.0.exe","version":"1.0.0"}}'
+INSTALLERS = '{"win":{"key":"1.0.0/PanUrgos-Studio-Setup-1.0.0.exe","file":"PanUrgos-Studio-Setup-1.0.0.exe","version":"1.0.0"},"mac":{"version":"1.0.0","variants":{"arm64":{"key":"1.0.0/PanUrgos-Studio-1.0.0-mac-arm64.dmg","file":"PanUrgos-Studio-1.0.0-mac-arm64.dmg","label":"Apple Silicon (M1–M4)","hint":"Macs from late 2020 on, including MacBook Air/Pro M-series, iMac, Mac mini and Mac Studio."},"x64":{"key":"1.0.0/PanUrgos-Studio-1.0.0-mac-x64.dmg","file":"PanUrgos-Studio-1.0.0-mac-x64.dmg","label":"Intel Mac","hint":"Older Macs with an Intel processor. Check: Apple menu → About This Mac → Chip/Processor."}}},"linux":{"version":"1.0.0","variants":{"appimage":{"key":"1.0.0/PanUrgos-Studio-1.0.0-linux-x86_64.AppImage","file":"PanUrgos-Studio-1.0.0-linux-x86_64.AppImage","label":"AppImage","hint":"Runs on most distributions: make it executable (chmod +x) and open it."},"deb":{"key":"1.0.0/PanUrgos-Studio-1.0.0-linux-amd64.deb","file":"PanUrgos-Studio-1.0.0-linux-amd64.deb","label":".deb (Ubuntu, Debian)","hint":"Installs system-wide with your package manager: sudo apt install ./PanUrgos-Studio-1.0.0-linux-amd64.deb"}}}}'
 
 [[d1_databases]]
 binding = "DB"
@@ -43,7 +43,7 @@ API_URL = "http://127.0.0.1:8787"
 ALLOWED_ORIGINS = "http://127.0.0.1:4173,http://localhost:4173"
 FROM_EMAIL = "PanUrgos <downloads@panurgos.com>"
 CONTACT_EMAIL = "privacy@example.test"
-INSTALLERS = '{"win":{"key":"1.0.0/PanUrgos-Studio-Setup-1.0.0.exe","file":"PanUrgos-Studio-Setup-1.0.0.exe","version":"1.0.0"}}'
+INSTALLERS = '{"win":{"key":"1.0.0/PanUrgos-Studio-Setup-1.0.0.exe","file":"PanUrgos-Studio-Setup-1.0.0.exe","version":"1.0.0"},"mac":{"version":"1.0.0","variants":{"arm64":{"key":"1.0.0/PanUrgos-Studio-1.0.0-mac-arm64.dmg","file":"PanUrgos-Studio-1.0.0-mac-arm64.dmg","label":"Apple Silicon (M1–M4)","hint":"Macs from late 2020 on, including MacBook Air/Pro M-series, iMac, Mac mini and Mac Studio."},"x64":{"key":"1.0.0/PanUrgos-Studio-1.0.0-mac-x64.dmg","file":"PanUrgos-Studio-1.0.0-mac-x64.dmg","label":"Intel Mac","hint":"Older Macs with an Intel processor. Check: Apple menu → About This Mac → Chip/Processor."}}},"linux":{"version":"1.0.0","variants":{"appimage":{"key":"1.0.0/PanUrgos-Studio-1.0.0-linux-x86_64.AppImage","file":"PanUrgos-Studio-1.0.0-linux-x86_64.AppImage","label":"AppImage","hint":"Runs on most distributions: make it executable (chmod +x) and open it."},"deb":{"key":"1.0.0/PanUrgos-Studio-1.0.0-linux-amd64.deb","file":"PanUrgos-Studio-1.0.0-linux-amd64.deb","label":".deb (Ubuntu, Debian)","hint":"Installs system-wide with your package manager: sudo apt install ./PanUrgos-Studio-1.0.0-linux-amd64.deb"}}}}'
 DEV_LOG_EMAILS = "1"
 
 [[env.dev.d1_databases]]

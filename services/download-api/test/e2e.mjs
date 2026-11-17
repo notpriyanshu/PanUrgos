@@ -50,12 +50,12 @@ check('file streams', f1.status === 200 && bytes.length === 200, `${f1.status} $
 check('file has download filename', /PanUrgos-Studio-Setup-1\.0\.0\.exe/.test(f1.headers.get('content-disposition') || ''));
 check('bogus ticket refused', (await fetch(`${API}/file/${'x'.repeat(43)}`)).status === 410);
 
-// Platform without a build: verified, but nothing to download
+// macOS: verified, offered as a choice of builds (variants are covered in test/variants.mjs)
 const macEmail = `mac+${Date.now()}@example.test`;
 await post('/signup', { email: macEmail, platform: 'mac', notify: true, consent: true });
 await wait(800);
 const r3 = await (await post('/redeem', { token: lastLink(macEmail) })).json();
-check('macOS: verified, marked coming soon', r3.ok && r3.available === false && r3.platform === 'mac');
+check('macOS: verified, offers its builds', r3.ok && r3.available === true && r3.variants?.length === 2);
 
 // Stats are protected
 check('stats need the key', (await fetch(`${API}/stats`)).status === 401);

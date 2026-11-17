@@ -39,7 +39,7 @@ export default {
       }
       const auth = /^\/auth\/(google|github)(\/callback)?$/.exec(url.pathname);
       if (auth && req.method === 'GET') return auth[2] ? await oauthCallback(env, auth[1], url) : await oauthStart(env, req, auth[1], url);
-      if (url.pathname.startsWith('/file/') && req.method === 'GET') return await file(env, url.pathname.slice(6));
+      if (url.pathname.startsWith('/file/') && req.method === 'GET') return await file(env, url.pathname.slice(6), url.searchParams.get('v'));
       if (url.pathname === '/stats' && req.method === 'GET') return await stats(env, req);
       if (url.pathname === '/' || url.pathname === '/health') return json({ ok: true, service: 'panurgos-api' });
       return json({ error: 'not_found' }, 404);
@@ -114,12 +114,20 @@ async function redeem(env, body, json) {
   if (!inst) return json({ ok: true, available: false, platform: row.platform, platformName: PLATFORMS[row.platform] });
 
   const ticket = randomToken();
-  await env.DB.prepare('INSERT INTO tokens (hash, user_id, kind, platform, expires_at, uses_left) VALUES (?, ?, ?, ?, ?, 3)')
+  await env.DB.prepare('INSERT INTO tokens (hash, user_id, kind, platform, expires_at, uses_left) VALUES (?, ?, ?, ?, ?, 4)')
     .bind(await sha256(ticket), row.user_id, 'file', row.platform, now + FILE_TTL).run();
-  return json({ ok: true, available: true, platform: row.platform, platformName: PLATFORMS[row.platform], version: inst.version, file: inst.file, ticket });
+  const variants = variantsOf(inst).map(({ id, label, file, hint }) => ({ id, label, file, hint }));
+  return json({ ok: true, available: true, platform: row.platform, platformName: PLATFORMS[row.platform], version: inst.version, file: variants[0].file, variants, ticket });
 }
 
-async function file(env, ticket) {
+// An installer entry is either one file ({key, file, version}) or several ({version, variants: {id: {key, file, label, hint}}}),
+// e.g. Apple Silicon / Intel on macOS, AppImage / .deb on Linux.
+function variantsOf(inst) {
+  if (!inst.variants) return [{ id: 'default', label: null, key: inst.key, file: inst.file }];
+  return Object.entries(inst.variants).map(([id, v]) => ({ id, label: v.label || id, key: v.key, file: v.file, hint: v.hint || '' }));
+}
+
+async function file(env, ticket, variant) {
   const plain = (status, text) => new Response(text, { status, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } });
   if (!/^[A-Za-z0-9_-]{40,60}$/.test(ticket)) return plain(400, 'Invalid download link.');
   const now = Date.now();
@@ -128,15 +136,20 @@ async function file(env, ticket) {
   ).bind(await sha256(ticket), now).first();
   if (!row) return plain(410, 'This download link has expired. Go back to panurgos.com and request a new one.');
   const inst = installers(env)[row.platform];
-  const obj = inst && await env.INSTALLERS_BUCKET.get(inst.key);
+  const all = inst ? variantsOf(inst) : [];
+  const pick = all.find((v) => v.id === variant) || all[0];
+  const obj = pick && await env.INSTALLERS_BUCKET.get(pick.key);
   if (!obj) return plain(503, 'The installer is not available right now. Please try again later.');
   // Count one download per ticket (the first fetch), not retries.
-  if (row.uses_left === 2) await env.DB.prepare('INSERT INTO downloads (user_id, platform, version, at) VALUES (?, ?, ?, ?)').bind(row.user_id, row.platform, inst.version, now).run();
+  if (row.uses_left === 3) {
+    const version = pick.id === 'default' ? inst.version : `${inst.version}/${pick.id}`;
+    await env.DB.prepare('INSERT INTO downloads (user_id, platform, version, at) VALUES (?, ?, ?, ?)').bind(row.user_id, row.platform, version, now).run();
+  }
   return new Response(obj.body, {
     headers: {
       'Content-Type': 'application/octet-stream',
       'Content-Length': String(obj.size),
-      'Content-Disposition': `attachment; filename="${inst.file}"`,
+      'Content-Disposition': `attachment; filename="${pick.file}"`,
       'Cache-Control': 'no-store',
       'X-Content-Type-Options': 'nosniff'
     }
