@@ -70,7 +70,8 @@
       "extendInfo": {
         "NSDocumentsFolderUsageDescription": "PanUrgos opens the project folders you choose.",
         "LSApplicationCategoryType": "public.app-category.developer-tools"
-      }
+      },
+      "artifactName": "PanUrgos-Studio-${version}-mac-${arch}.${ext}"
     },
     "dmg": {
       "title": "PanUrgos Studio",
@@ -108,7 +109,9 @@
           "StartupWMClass": "PanUrgos Studio",
           "MimeType": "text/plain;text/x-python;application/javascript;application/json;text/x-c;text/x-c++;text/x-java;text/x-go;text/x-rust;"
         }
-      }
+      },
+      "maintainer": "PanUrgos <downloads@panurgos.com>",
+      "artifactName": "PanUrgos-Studio-${version}-linux-${arch}.${ext}"
     },
     "deb": {
       "depends": [

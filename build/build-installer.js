@@ -122,7 +122,8 @@ async function prepareNsis() {
 function electronBuilder(args) {
   log('electron-builder', args.join(' '));
   const cli = path.join(ROOT, 'node_modules', 'electron-builder', 'cli.js');
-  const r = spawnSync(process.execPath, [cli, ...args], { cwd: ROOT, stdio: 'inherit' });
+  // Never publish from here: installers are distributed through panurgos.com's signup gate, not public releases.
+  const r = spawnSync(process.execPath, [cli, ...args, '--publish', 'never'], { cwd: ROOT, stdio: 'inherit' });
   if (r.status !== 0) throw new Error('electron-builder failed');
 }
 
@@ -147,7 +148,11 @@ function electronBuilder(args) {
   } else if (platform === 'darwin') {
     // macOS: drag-to-Applications DMG (+ zip for auto-update/side-loading). Signing and notarization run
     // automatically when CSC_LINK / APPLE_ID credentials are present in the environment.
-    electronBuilder(['--mac', 'dmg', 'zip', `--${arch}`]);
+    // Without a Developer ID certificate, sign ad-hoc: a fully unsigned app is reported as "damaged" on
+    // Apple Silicon. Users then approve it once (System Settings > Privacy & Security > Open Anyway).
+    const adHoc = process.env.CSC_LINK ? [] : ['-c.mac.identity=-'];
+    if (adHoc.length) log('No signing certificate: ad-hoc signing (Gatekeeper will ask the user to approve once).');
+    electronBuilder(['--mac', 'dmg', 'zip', `--${arch}`, ...adHoc]);
     list(path.join(ROOT, 'dist'), /\.(dmg|zip)$/).forEach((f) => log(`\x1b[32m✔\x1b[0m ${f}`));
   } else {
     electronBuilder(['--linux', 'AppImage', 'deb', `--${arch === 'arm64' ? 'arm64' : 'x64'}`]);
