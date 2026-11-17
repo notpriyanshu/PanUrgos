@@ -23,7 +23,7 @@ jobs:
           - os: windows-latest
             name: windows-x64
             args: ''
-          - os: macos-14            # Apple Silicon (M1–M4, Mac Studio): Metal
+          - os: macos-15            # Apple Silicon (M1–M4, Mac Studio): Metal
             name: macos-arm64
             args: '-- --arch=arm64'
           - os: macos-15-intel      # Intel Macs (macos-13 runners are retired)

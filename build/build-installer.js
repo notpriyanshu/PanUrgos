@@ -123,7 +123,12 @@ function electronBuilder(args) {
   log('electron-builder', args.join(' '));
   const cli = path.join(ROOT, 'node_modules', 'electron-builder', 'cli.js');
   // Never publish from here: installers are distributed through panurgos.com's signup gate, not public releases.
-  const r = spawnSync(process.execPath, [cli, ...args, '--publish', 'never'], { cwd: ROOT, stdio: 'inherit' });
+  // CI passes signing secrets as empty strings when they aren't configured; electron-builder would read an
+  // empty CSC_LINK as a path ("... not a file"). Drop empty signing variables so it falls back cleanly.
+  const env = { ...process.env };
+  for (const k of ['CSC_LINK', 'CSC_KEY_PASSWORD', 'APPLE_ID', 'APPLE_APP_SPECIFIC_PASSWORD', 'APPLE_TEAM_ID', 'WIN_CSC_LINK', 'WIN_CSC_KEY_PASSWORD']) if (!env[k]) delete env[k];
+  if (!env.CSC_LINK) env.CSC_IDENTITY_AUTO_DISCOVERY = 'false';
+  const r = spawnSync(process.execPath, [cli, ...args, '--publish', 'never'], { cwd: ROOT, stdio: 'inherit', env });
   if (r.status !== 0) throw new Error('electron-builder failed');
 }
 

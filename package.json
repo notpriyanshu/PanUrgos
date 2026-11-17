@@ -71,7 +71,45 @@
         "NSDocumentsFolderUsageDescription": "PanUrgos opens the project folders you choose.",
         "LSApplicationCategoryType": "public.app-category.developer-tools"
       },
-      "artifactName": "PanUrgos-Studio-${version}-mac-${arch}.${ext}"
+      "artifactName": "PanUrgos-Studio-${version}-mac-${arch}.${ext}",
+      "fileAssociations": [
+        {
+          "ext": [
+            "js",
+            "ts",
+            "tsx",
+            "jsx",
+            "json",
+            "md",
+            "py",
+            "c",
+            "cpp",
+            "h",
+            "hpp",
+            "cs",
+            "java",
+            "kt",
+            "go",
+            "rs",
+            "rb",
+            "php",
+            "swift",
+            "lua",
+            "sql",
+            "sh",
+            "yml",
+            "yaml",
+            "toml",
+            "html",
+            "css",
+            "scss",
+            "vue",
+            "txt"
+          ],
+          "name": "Source code",
+          "role": "Editor"
+        }
+      ]
     },
     "dmg": {
       "title": "PanUrgos Studio",
@@ -117,45 +155,7 @@
       "depends": [
         "libvulkan1"
       ]
-    },
-    "fileAssociations": [
-      {
-        "ext": [
-          "js",
-          "ts",
-          "tsx",
-          "jsx",
-          "json",
-          "md",
-          "py",
-          "c",
-          "cpp",
-          "h",
-          "hpp",
-          "cs",
-          "java",
-          "kt",
-          "go",
-          "rs",
-          "rb",
-          "php",
-          "swift",
-          "lua",
-          "sql",
-          "sh",
-          "yml",
-          "yaml",
-          "toml",
-          "html",
-          "css",
-          "scss",
-          "vue",
-          "txt"
-        ],
-        "name": "Source code",
-        "role": "Editor"
-      }
-    ]
+    }
   },
   "homepage": "https://github.com/notpriyanshu/PanUrgos"
 }
