@@ -18,7 +18,7 @@ INSTALLERS = '{"win":{"key":"1.0.0/PanUrgos-Studio-Setup-1.0.0.exe","file":"PanU
 [[d1_databases]]
 binding = "DB"
 database_name = "panurgos-downloads"
-database_id = "REPLACE_AFTER_wrangler_d1_create"
+database_id = "15301656-5f1e-405d-b6c8-e573f8a4fcbb"
 
 [[r2_buckets]]
 binding = "INSTALLERS_BUCKET"
