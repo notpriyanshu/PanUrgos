@@ -15,7 +15,7 @@ U.terminal = (() => {
   }
   function prompt() {
     const short = cwd.length > 48 ? '…' + cwd.slice(-46) : cwd;
-    $('#term-prompt').innerHTML = running ? '<span class="c-dim">running…</span>' : `<b>umbra</b> ${esc(short)} ❯`;
+    $('#term-prompt').innerHTML = running ? '<span class="c-dim">running…</span>' : `<b>panurgos</b> ${esc(short)} ❯`;
   }
   async function run(cmd, { show = true } = {}) {
     U.showPanel('terminal');
@@ -24,29 +24,29 @@ U.terminal = (() => {
     history.unshift(cmd); hIdx = -1;
     if (show) write(`\x1b[36m❯\x1b[0m \x1b[1m${cmd}\x1b[0m\n`);
     running = true; prompt();
-    await umbra.term.run(ID, cmd);
+    await panurgos.term.run(ID, cmd);
   }
   document.addEventListener('DOMContentLoaded', async () => {
-    cwd = await umbra.term.cwd(ID); prompt();
-    write('\x1b[35mUmbra Terminal\x1b[0m \x1b[90m— commands run locally on this machine. Nothing is recorded or uploaded.\x1b[0m\n');
+    cwd = await panurgos.term.cwd(ID); prompt();
+    write('\x1b[35mPanUrgos Terminal\x1b[0m \x1b[90m— commands run locally on this machine. Nothing is recorded or uploaded.\x1b[0m\n');
     const inp = $('#term-input');
     inp.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') { const v = inp.value; inp.value = ''; run(v); }
       else if (e.key === 'ArrowUp') { if (hIdx < history.length - 1) inp.value = history[++hIdx]; e.preventDefault(); }
       else if (e.key === 'ArrowDown') { hIdx = Math.max(-1, hIdx - 1); inp.value = hIdx < 0 ? '' : history[hIdx]; e.preventDefault(); }
-      else if (e.key === 'c' && e.ctrlKey && running) { umbra.term.kill(ID); }
+      else if (e.key === 'c' && e.ctrlKey && running) { panurgos.term.kill(ID); }
       else if (e.key === 'l' && e.ctrlKey) { e.preventDefault(); $('#term-out').innerHTML = ''; }
     });
     $('#term-out').addEventListener('click', () => { if (!getSelection().toString()) inp.focus(); });
     $('#term-clear').onclick = () => { $('#term-out').innerHTML = ''; };
-    $('#term-kill').onclick = () => umbra.term.kill(ID);
+    $('#term-kill').onclick = () => panurgos.term.kill(ID);
   });
-  umbra.term.onData(({ data }) => write(data));
-  umbra.term.onExit(({ code, cwd: c }) => {
+  panurgos.term.onData(({ data }) => write(data));
+  panurgos.term.onExit(({ code, cwd: c }) => {
     running = false; cwd = c;
     if (code) write(`\x1b[90m[exit ${code}]\x1b[0m\n`);
     prompt(); bus.emit('fs:changed');
   });
-  bus.on('workspace', async () => { cwd = await umbra.term.cwd(ID); prompt(); });
+  bus.on('workspace', async () => { cwd = await panurgos.term.cwd(ID); prompt(); });
   return { run, write };
 })();

@@ -30,7 +30,7 @@ U.chat = (() => {
     const c = $('#chat');
     c.querySelector('.chat-empty')?.remove();
     const node = el('div', { class: `msg ${role}` },
-      el('div', { class: 'who', html: role === 'user' ? '<span class="avatar">●</span>You' : `<span class="avatar">✦</span>Umbra <span class="muted small" style="font-weight:400">${esc(modelName())}</span>` }),
+      el('div', { class: 'who', html: role === 'user' ? '<span class="avatar">●</span>You' : `<span class="avatar">✦</span>PanUrgos <span class="muted small" style="font-weight:400">${esc(modelName())}</span>` }),
       el('div', { class: 'body', html }));
     c.append(node);
     scroll(true);
@@ -90,7 +90,7 @@ U.chat = (() => {
     const sel = U.editor.selection();
     if (sel && sel.length > 1 && includeSelection) parts.push(`Selected code:\n\`\`\`${U.editor.language()}\n${sel}\n\`\`\``);
     for (const p of attached) {
-      try { const r = await umbra.fs.readFile(p); if (!r.binary) parts.push(`File: ${rel(p)}\n\`\`\`\n${r.content.slice(0, 30000)}\n\`\`\``); } catch {}
+      try { const r = await panurgos.fs.readFile(p); if (!r.binary) parts.push(`File: ${rel(p)}\n\`\`\`\n${r.content.slice(0, 30000)}\n\`\`\``); } catch {}
     }
     if (root) parts.unshift(`Workspace root: ${state.workspace.name} (tool paths are relative to it)`);
     return parts.length ? `<context>\n${parts.join('\n\n')}\n</context>\n\n` : '';
@@ -107,7 +107,7 @@ U.chat = (() => {
     const reqId = uid();
     current = { reqId, node: addMsg('assistant', ''), segs: [], answer: '', tools: {} };
     setBusy(true);
-    umbra.llm.chat(reqId, { messages, agent: state.mode === 'agent' });
+    panurgos.llm.chat(reqId, { messages, agent: state.mode === 'agent' });
   }
 
   function setBusy(b) {
@@ -116,7 +116,7 @@ U.chat = (() => {
     btn.querySelector('span').textContent = b ? 'Stop' : 'Send';
   }
 
-  umbra.llm.onEvent(({ reqId, type, data }) => {
+  panurgos.llm.onEvent(({ reqId, type, data }) => {
     if (!current || current.reqId !== reqId) return;
     if (type === 'token') {
       const s = seg('text'); s.text += data; current.answer += data; renderText(s);
@@ -173,23 +173,23 @@ U.chat = (() => {
     setBusy(false); persist();
   }
 
-  function persist() { try { if (state.settings?.privacy.persistChats) localStorage.setItem('umbra.chat', JSON.stringify(messages.slice(-60))); else localStorage.removeItem('umbra.chat'); } catch {} }
+  function persist() { try { if (state.settings?.privacy.persistChats) localStorage.setItem('panurgos.chat', JSON.stringify(messages.slice(-60))); else localStorage.removeItem('panurgos.chat'); } catch {} }
 
   function reset() {
-    if (current) umbra.llm.cancel(current.reqId);
+    if (current) panurgos.llm.cancel(current.reqId);
     current = null; messages = []; attached.clear(); setBusy(false);
     $('#chat').innerHTML = ''; persist(); renderEmpty(); renderChips();
   }
 
   // ---------------------------------------------------------------- approvals
-  umbra.agent.onApproval(async (req) => {
+  panurgos.agent.onApproval(async (req) => {
     const what = { write_file: 'write a file', run_command: 'run a shell command', read_file: 'read a file', list_dir: 'list a folder', search: 'search the workspace' }[req.name] || req.name;
     const detail = req.name === 'write_file' ? `<b>${esc(req.args.path)}</b><pre>${esc(String(req.args.content ?? '').slice(0, 6000))}</pre>`
       : req.name === 'run_command' ? `<pre>${esc(req.args.command)}</pre><div class="muted small">Runs in the workspace root on this machine.</div>`
         : `<pre>${esc(JSON.stringify(req.args, null, 2))}</pre>`;
     const ok = await U.modal({ title: `The agent wants to ${what}`, icon: '<span class="spark">✦</span> ', html: detail,
       buttons: [{ label: 'Deny', value: false }, { label: 'Allow', value: true, primary: true }] });
-    umbra.agent.approve(req.id, !!ok);
+    panurgos.agent.approve(req.id, !!ok);
   });
 
   // ---------------------------------------------------------------- code block actions
@@ -214,13 +214,13 @@ U.chat = (() => {
     const p = $('#prompt');
     p.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } });
     p.addEventListener('input', autosize);
-    $('#send').onclick = () => (current ? umbra.llm.cancel(current.reqId) : send());
+    $('#send').onclick = () => (current ? panurgos.llm.cancel(current.reqId) : send());
     $('#ai-new').onclick = reset;
     $$('#mode-seg button').forEach((b) => (b.onclick = () => {
       state.mode = b.dataset.mode; $$('#mode-seg button').forEach((x) => x.classList.toggle('active', x === b)); renderChips();
     }));
     try {
-      const saved = JSON.parse(localStorage.getItem('umbra.chat') || 'null');
+      const saved = JSON.parse(localStorage.getItem('panurgos.chat') || 'null');
       if (saved?.length) { messages = saved; saved.forEach((m) => addMsg(m.role, m.role === 'user' ? esc(m.content.replace(/^<context>[\s\S]*?<\/context>\n\n/, '')) : U.md.render(m.content))); }
     } catch {}
     renderEmpty();

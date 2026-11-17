@@ -2,3 +2,9 @@ node_modules/
 dist/
 out/
 *.7z
+build/.cache/
+build/llama.cpp/
+build/redist/
+
+# Website (deployed from its own repo)
+website/

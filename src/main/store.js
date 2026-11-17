@@ -1,4 +1,4 @@
-// Umbra Studio — local settings + encrypted secret vault.
+// PanUrgos Studio — local settings + encrypted secret vault.
 // Settings live in <userData>/settings.json. Secrets (API keys) are encrypted with the
 // OS keychain via Electron safeStorage (DPAPI on Windows, Keychain on macOS, libsecret on Linux)
 // and are NEVER sent to the renderer process — the UI only ever sees a masked hint.
@@ -7,6 +7,11 @@ const fs = require('fs');
 const path = require('path');
 
 const PROVIDER_PRESETS = {
+  panurgos: {
+    label: 'PanUrgos Local (llama.cpp)', kind: 'openai', local: true, builtin: true,
+    baseUrl: 'managed', model: '', needsKey: false,
+    hint: 'Built-in llama.cpp runtime. Download and load models from the Models panel — no other app needed.'
+  },
   unsloth: {
     label: 'Unsloth Studio', kind: 'openai', local: true,
     baseUrl: 'http://127.0.0.1:8888/v1', model: '', needsKey: true,
@@ -55,7 +60,7 @@ const PROVIDER_PRESETS = {
 };
 
 const DEFAULTS = {
-  activeProvider: 'unsloth',
+  activeProvider: 'panurgos',
   providers: Object.fromEntries(
     Object.entries(PROVIDER_PRESETS).map(([id, p]) => [id, { baseUrl: p.baseUrl, model: p.model }])
   ),
@@ -72,7 +77,21 @@ const DEFAULTS = {
     redactSecrets: true,      // scrub API keys / tokens from prompts sent to remote providers
     persistChats: false,      // chats live in memory only
     sendFileContext: true,    // attach the active file to prompts
-    blockRendererNetwork: true
+    blockRendererNetwork: true,
+    allowHub: false,          // let the main process reach huggingface.co (search + model downloads)
+    allowUpdates: false       // let the main process reach github.com (llama.cpp builds)
+  },
+  local: {
+    backend: 'auto',          // auto | cuda-13.5 | cuda-12.4 | cuda-12.8 | vulkan | cpu | metal
+    modelsDir: '',            // '' = <userData>/models
+    scanOtherApps: true,      // also list GGUFs already downloaded by LM Studio / the HF cache
+    lastModel: '',
+    gpuLayers: 999,           // layers offloaded to GPU (999 = all that fit)
+    ctxSize: 8192,
+    threads: 0,               // 0 = llama.cpp default
+    extraArgs: '',
+    checkOnLaunch: true,      // only runs when privacy.allowUpdates is on
+    autoUpdate: false
   },
   agent: {
     workspaceTools: true,     // let the model read/write/search files & run commands
@@ -81,9 +100,9 @@ const DEFAULTS = {
     autoApproveCommands: false,
     maxSteps: 12
   },
-  editor: { fontSize: 14, minimap: true, wordWrap: 'off', theme: 'umbra-dark', fontLigatures: true },
+  editor: { fontSize: 14, minimap: true, wordWrap: 'off', theme: 'panurgos-dark', fontLigatures: true },
   systemPrompt:
-    'You are Umbra, an expert software engineer embedded in a private, local code editor. ' +
+    'You are PanUrgos, an expert software engineer embedded in a private, local code editor. ' +
     'Be concise. Prefer showing code in fenced blocks with a language tag. ' +
     'When workspace tools are available, inspect files before editing them and explain what you change.'
 };

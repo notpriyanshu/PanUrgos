@@ -15,7 +15,7 @@ U.editor = (() => {
       defineTheme();
       const s = state.settings?.editor || {};
       ed = monaco.editor.create($('#editor'), {
-        theme: 'umbra-dark', automaticLayout: true, fontFamily: '"Cascadia Code", "JetBrains Mono", Consolas, monospace',
+        theme: 'panurgos-dark', automaticLayout: true, fontFamily: '"Cascadia Code", "JetBrains Mono", Consolas, monospace',
         fontSize: s.fontSize || 14, fontLigatures: s.fontLigatures !== false, minimap: { enabled: s.minimap !== false, renderCharacters: false, scale: 1 },
         wordWrap: s.wordWrap || 'off', smoothScrolling: true, cursorSmoothCaretAnimation: 'on', cursorBlinking: 'smooth',
         renderLineHighlight: 'all', bracketPairColorization: { enabled: true }, guides: { bracketPairs: 'active', indentation: true },
@@ -26,20 +26,20 @@ U.editor = (() => {
       ed.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => save());
       ed.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK, () => openInlineEdit());
       ed.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyL, () => bus.emit('ai:focus', { withSelection: true }));
-      ed.addAction({ id: 'umbra.explain', label: 'Umbra: Explain Selection', contextMenuGroupId: '0_umbra', contextMenuOrder: 1,
+      ed.addAction({ id: 'panurgos.explain', label: 'PanUrgos: Explain Selection', contextMenuGroupId: '0_panurgos', contextMenuOrder: 1,
         run: () => bus.emit('ai:quick', { kind: 'explain' }) });
-      ed.addAction({ id: 'umbra.refactor', label: 'Umbra: Refactor Selection', contextMenuGroupId: '0_umbra', contextMenuOrder: 2,
+      ed.addAction({ id: 'panurgos.refactor', label: 'PanUrgos: Refactor Selection', contextMenuGroupId: '0_panurgos', contextMenuOrder: 2,
         run: () => bus.emit('ai:quick', { kind: 'refactor' }) });
-      ed.addAction({ id: 'umbra.tests', label: 'Umbra: Write Tests for Selection', contextMenuGroupId: '0_umbra', contextMenuOrder: 3,
+      ed.addAction({ id: 'panurgos.tests', label: 'PanUrgos: Write Tests for Selection', contextMenuGroupId: '0_panurgos', contextMenuOrder: 3,
         run: () => bus.emit('ai:quick', { kind: 'tests' }) });
-      ed.addAction({ id: 'umbra.inline', label: 'Umbra: Edit with AI…', contextMenuGroupId: '0_umbra', contextMenuOrder: 0,
+      ed.addAction({ id: 'panurgos.inline', label: 'PanUrgos: Edit with AI…', contextMenuGroupId: '0_panurgos', contextMenuOrder: 0,
         keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyK], run: () => openInlineEdit() });
       resolve();
     });
   });
 
   function defineTheme() {
-    monaco.editor.defineTheme('umbra-dark', {
+    monaco.editor.defineTheme('panurgos-dark', {
       base: 'vs-dark', inherit: true,
       rules: [
         { token: '', foreground: 'd5dbea' },
@@ -114,7 +114,7 @@ U.editor = (() => {
     let t = tabs.find((x) => x.path === path);
     if (!t) {
       let res;
-      try { res = await umbra.fs.readFile(path); } catch (e) { toast(e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, ''), 'bad'); return; }
+      try { res = await panurgos.fs.readFile(path); } catch (e) { toast(e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, ''), 'bad'); return; }
       if (res.binary) { toast(`${basename(path)} is a binary file and can't be shown.`, 'warn'); return; }
       const uri = monaco.Uri.file(path);
       const model = monaco.editor.getModel(uri) || monaco.editor.createModel(res.content, langFor(path), uri);
@@ -141,7 +141,7 @@ U.editor = (() => {
     renderTabs(); renderCrumbs();
     $('#st-lang').textContent = t ? langFor(path) : '';
     $('#st-pos').textContent = t ? 'Ln 1, Col 1' : '';
-    $('#tb-title').textContent = t ? `${basename(path)} — ${state.workspace?.name || 'Umbra Studio'}` : (state.workspace?.name || 'Umbra Studio');
+    $('#tb-title').textContent = t ? `${basename(path)} — ${state.workspace?.name || 'PanUrgos Studio'}` : (state.workspace?.name || 'PanUrgos Studio');
     bus.emit('editor:active', t ? path : null);
   }
 
@@ -165,7 +165,7 @@ U.editor = (() => {
     const t = tabs.find((x) => x.path === path);
     if (!t) return;
     try {
-      await umbra.fs.writeFile(t.path, t.model.getValue());
+      await panurgos.fs.writeFile(t.path, t.model.getValue());
       t.savedVersion = t.model.getAlternativeVersionId(); t.dirty = false; renderTabs();
       bus.emit('editor:dirty', { path, dirty: false });
     } catch (e) { toast('Save failed: ' + e.message, 'bad'); }
@@ -222,13 +222,13 @@ U.editor = (() => {
     try {
       const before = model.getValueInRange({ startLineNumber: Math.max(1, range.startLineNumber - 30), startColumn: 1, endLineNumber: range.startLineNumber, endColumn: 1 });
       const after = model.getValueInRange({ startLineNumber: range.endLineNumber + 1, startColumn: 1, endLineNumber: Math.min(model.getLineCount(), range.endLineNumber + 30), endColumn: 1 });
-      let out = await umbra.llm.complete([{ role: 'user', content:
+      let out = await panurgos.llm.complete([{ role: 'user', content:
         `Rewrite the SELECTED ${lang} code according to the instruction. Respond with ONLY the replacement code in a single fenced code block, nothing else.\n\n` +
         `Instruction: ${instruction}\n\nContext before:\n\`\`\`${lang}\n${before}\n\`\`\`\n\nSELECTED:\n\`\`\`${lang}\n${code}\n\`\`\`\n\nContext after:\n\`\`\`${lang}\n${after}\n\`\`\`` }]);
       const m = out.match(/```[^\n]*\n([\s\S]*?)```/);
       if (m) out = m[1].replace(/\n$/, '');
       ed.pushUndoStop();
-      ed.executeEdits('umbra-inline', [{ range, text: out, forceMoveMarkers: true }]);
+      ed.executeEdits('panurgos-inline', [{ range, text: out, forceMoveMarkers: true }]);
       ed.pushUndoStop();
       closeInlineEdit();
       toast('Applied AI edit — Ctrl+Z to undo', 'ok');
@@ -253,17 +253,17 @@ U.editor = (() => {
     language: () => (activePath ? langFor(activePath) : ''),
     insert(text) {
       if (!activePath) { toast('Open a file first.', 'warn'); return; }
-      ed.pushUndoStop(); ed.executeEdits('umbra', [{ range: ed.getSelection(), text, forceMoveMarkers: true }]); ed.pushUndoStop(); ed.focus();
+      ed.pushUndoStop(); ed.executeEdits('panurgos', [{ range: ed.getSelection(), text, forceMoveMarkers: true }]); ed.pushUndoStop(); ed.focus();
     },
     replaceAll(text) {
       if (!activePath) { toast('Open a file first.', 'warn'); return; }
       const m = ed.getModel(); ed.pushUndoStop();
-      ed.executeEdits('umbra', [{ range: m.getFullModelRange(), text }]); ed.pushUndoStop(); ed.focus();
+      ed.executeEdits('panurgos', [{ range: m.getFullModelRange(), text }]); ed.pushUndoStop(); ed.focus();
     },
     async reloadIfOpen(path) {
       const t = tabs.find((x) => x.path === path);
       if (!t || t.dirty) return;
-      const r = await umbra.fs.readFile(path);
+      const r = await panurgos.fs.readFile(path);
       if (!r.binary && r.content !== t.model.getValue()) { t.model.setValue(r.content); t.savedVersion = t.model.getAlternativeVersionId(); t.dirty = false; renderTabs(); }
     },
     renamePath(from, to) {

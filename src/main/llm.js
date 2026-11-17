@@ -1,4 +1,4 @@
-// Umbra Studio — model gateway + coding agent loop.
+// PanUrgos Studio — model gateway + coding agent loop.
 // All model traffic flows through the main process so that:
 //   * API keys never touch the renderer,
 //   * every outbound request is recorded in the Network Ledger,
@@ -128,7 +128,8 @@ async function execTool(name, args, root) {
 
 // ------------------------------------------------------------- the gateway
 class Gateway {
-  constructor({ store, ledger, getWorkspace, requestApproval }) {
+  constructor({ store, ledger, getWorkspace, requestApproval, runtime }) {
+    this.runtime = runtime;
     this.store = store;
     this.ledger = ledger;
     this.getWorkspace = getWorkspace;
@@ -136,11 +137,18 @@ class Gateway {
     this.controllers = new Map();
   }
 
-  resolveProvider(id) {
+  async resolveProvider(id, { start = false, onInfo } = {}) {
     const s = this.store.getSettings();
     const pid = id || s.activeProvider;
     const preset = PROVIDER_PRESETS[pid];
     if (!preset) throw new Error(`Unknown provider "${pid}"`);
+    if (preset.builtin) {
+      // Built-in llama.cpp: start the sidecar on demand, always on loopback.
+      const srv = start ? await this.runtime.ensureRunning(onInfo)
+        : this.runtime.server.state === 'ready' ? this.runtime.server
+          : (() => { throw new Error(this.runtime.server.state === 'starting' ? 'Model is still loading…' : 'No model loaded yet — it loads on your first message, or pick one in the Models panel.'); })();
+      return { id: pid, preset, baseUrl: `http://127.0.0.1:${srv.port}/v1`, model: srv.alias, key: this.runtime.apiKey, local: true, settings: s };
+    }
     const cfg = s.providers[pid] || {};
     const baseUrl = (cfg.baseUrl || preset.baseUrl).replace(/\/+$/, '');
     const local = isLoopback(baseUrl);
@@ -166,7 +174,7 @@ class Gateway {
   }
 
   async listModels(providerId) {
-    const p = this.resolveProvider(providerId);
+    const p = await this.resolveProvider(providerId);
     const headers = {};
     if (p.preset.kind === 'anthropic') { headers['x-api-key'] = p.key; headers['anthropic-version'] = '2023-06-01'; }
     else if (p.key) headers.Authorization = `Bearer ${p.key}`;
@@ -187,7 +195,7 @@ class Gateway {
     const ctrl = new AbortController();
     this.controllers.set(reqId, ctrl);
     try {
-      const p = this.resolveProvider(providerId);
+      const p = await this.resolveProvider(providerId, { start: true, onInfo: (m) => emit('info', m) });
       const s = p.settings;
       const doRedact = s.privacy.redactSecrets && !p.local;
       let redactions = 0;

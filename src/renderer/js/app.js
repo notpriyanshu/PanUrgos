@@ -19,14 +19,16 @@
   };
   U.showAI = () => U.toggle('ai', true);
 
-  function showView(view) {
+  function showView(view, force = false) {
     if (view === 'agent') { U.showAI(); $('#prompt').focus(); return; }
     const cur = $('.act.active')?.dataset.view;
-    if (cur === view && !$('#sidebar').classList.contains('collapsed')) { U.toggle('sidebar', false); return; }
+    if (!force && cur === view && !$('#sidebar').classList.contains('collapsed')) { U.toggle('sidebar', false); return; }
     U.toggle('sidebar', true);
     $$('.act[data-view]').forEach((b) => b.classList.toggle('active', b.dataset.view === view));
     $$('.sb-view').forEach((v) => v.classList.toggle('hidden', v.dataset.view !== view));
     if (view === 'search') $('#search-input').focus();
+    bus.emit('view', view);
+    if (view === 'models') { const w = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-w')) || 0; if (w < 340) document.documentElement.style.setProperty('--sidebar-w', '340px'); }
   }
 
   // ---------------------------------------------------------------- menus
@@ -49,8 +51,8 @@
     file: () => [['Open Folder…', () => U.explorer.openFolder(), 'Ctrl+O'], ['New File…', () => U.explorer.create(false)], ['New Folder…', () => U.explorer.create(true)], '-',
       ['Save', () => U.editor.save(), 'Ctrl+S'], ['Save All', () => U.editor.saveAll(), 'Ctrl+Alt+S'], '-',
       ['Close Editor', () => U.editor.activePath() && U.editor.close(U.editor.activePath()), 'Ctrl+W'],
-      ['Close Folder', async () => { await umbra.fs.closeFolder(); U.explorer.setWorkspace(null); }], '-',
-      ['Settings', () => U.settingsUI.open(), 'Ctrl+,'], '-', ['Exit', () => umbra.win.close()]],
+      ['Close Folder', async () => { await panurgos.fs.closeFolder(); U.explorer.setWorkspace(null); }], '-',
+      ['Settings', () => U.settingsUI.open(), 'Ctrl+,'], '-', ['Exit', () => panurgos.win.close()]],
     edit: () => [['Undo', () => trig('undo'), 'Ctrl+Z'], ['Redo', () => trig('redo'), 'Ctrl+Y'], '-',
       ['Find', () => act('actions.find'), 'Ctrl+F'], ['Replace', () => act('editor.action.startFindReplaceAction'), 'Ctrl+H'], ['Find in Files', () => showView('search'), 'Ctrl+Shift+F'], '-',
       ['Format Document', () => act('editor.action.formatDocument'), 'Shift+Alt+F'], ['Toggle Line Comment', () => act('editor.action.commentLine'), 'Ctrl+/']],
@@ -59,8 +61,8 @@
       ['Toggle Sidebar', () => U.toggle('sidebar'), 'Ctrl+B'], ['Toggle Panel', () => U.toggle('panel'), 'Ctrl+J'], ['Toggle Agent Panel', () => U.toggle('ai'), 'Ctrl+Alt+B'], '-',
       ['Terminal', () => U.showPanel('terminal'), 'Ctrl+`'], ['Network Ledger', () => U.showPanel('ledger')]],
     ai: () => [['Ask Agent', () => bus.emit('ai:focus'), 'Ctrl+L'], ['Edit Selection with AI', () => U.editor.openInlineEdit(), 'Ctrl+K'], ['New Chat Session', () => U.chat.reset()], '-',
-      ['Switch Model…', () => U.pickModel()], ['Models & API Keys…', () => U.settingsUI.open('models')], ['Unsloth Agents…', () => U.settingsUI.open('unsloth')], ['Coding Agent Settings…', () => U.settingsUI.open('agent')]],
-    help: () => [['Keyboard Shortcuts', () => U.settingsUI.open('about')], ['Privacy Guarantees', () => U.settingsUI.open('privacy')], ['About Umbra Studio', () => U.settingsUI.open('about')]]
+      ['Switch Model…', () => U.pickModel()], ['Browse & Download Models…', () => showView('models'), 'Ctrl+Shift+M'], ['Local Runtime (llama.cpp)…', () => U.settingsUI.open('runtime')], '-', ['Models & API Keys…', () => U.settingsUI.open('models')], ['Unsloth Agents…', () => U.settingsUI.open('unsloth')], ['Coding Agent Settings…', () => U.settingsUI.open('agent')]],
+    help: () => [['Setup & Optional Components…', () => panurgos.setup.open()], ['Packages & Toolchains', () => showView('packages', true)], '-', ['Keyboard Shortcuts', () => U.settingsUI.open('about')], ['Privacy Guarantees', () => U.settingsUI.open('privacy')], ['About PanUrgos Studio', () => U.settingsUI.open('about')]]
   };
   const trig = (what) => U.editor.instance?.trigger('menu', what, null);
   const act = (id) => U.editor.instance?.getAction(id)?.run();
@@ -72,8 +74,15 @@
     $('#model-dot').className = `dot ${st === 'bad' ? 'bad' : st === 'ok' ? (local ? 'ok' : 'cloud') : ''}`;
   };
   U.checkModel = async () => {
-    try { await umbra.llm.test(); U.setModelStatus('ok'); } catch { U.setModelStatus('bad'); }
+    if (state.settings?.activeProvider === 'panurgos') {
+      // Built-in runtime: the dot reflects whether a model is loaded; it loads lazily on first message.
+      const rt = await panurgos.runtime.status();
+      U.setModelStatus(rt.server?.state === 'ready' ? 'ok' : rt.server?.state === 'error' ? 'bad' : '');
+      return;
+    }
+    try { await panurgos.llm.test(); U.setModelStatus('ok'); } catch { U.setModelStatus('bad'); }
   };
+  U.showView = (v) => showView(v, true);
   U.pickModel = () => {
     const r = $('#model-picker').getBoundingClientRect();
     const s = state.settings;
@@ -105,14 +114,15 @@
     $('#welcome').innerHTML = `<div class="welcome-inner">
       <div class="hero">
         <svg class="hero-logo" viewBox="0 0 32 32"><defs><linearGradient id="lg3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs><path d="M16 2 4 8v8c0 7 5.2 12.4 12 14 6.8-1.6 12-7 12-14V8L16 2z" fill="url(#lg3)"/><path d="M16 9a7 7 0 1 0 0 14 5.2 5.2 0 0 1 0-14z" fill="#08090d"/></svg>
-        <div><h1>Umbra Studio</h1><p>The private AI code editor. Your models, your keys, your machine.</p></div>
+        <div><h1>PanUrgos Studio</h1><p>The private AI code editor. Your models, your keys, your machine.</p></div>
       </div>
       <div class="badges">
         <span class="badge"><i></i>Zero telemetry</span>
         <span class="badge"><i></i>${s?.privacy.localOnly ? 'Local-only mode on' : 'Hybrid mode'}</span>
         <span class="badge"><i></i>Keys sealed in OS keychain</span>
         <span class="badge"><i></i>Sandboxed agent</span>
-        <span class="badge"><i></i>Unsloth · Ollama · LM Studio · llama.cpp · vLLM</span>
+        <span class="badge"><i></i>Built-in llama.cpp + Hugging Face</span>
+        <span class="badge"><i></i>Unsloth · Ollama · LM Studio · vLLM</span>
       </div>
       <div class="wgrid">
         <div class="wcol"><h3>START</h3>
@@ -122,9 +132,9 @@
           <button class="wlink" data-w="ai">${ic('M12 2l2.4 5.6L20 10l-5.6 2.4L12 18l-2.4-5.6L4 10l5.6-2.4z')}Ask the Agent<kbd>Ctrl L</kbd></button>
         </div>
         <div class="wcol"><h3>CONNECT A MODEL</h3>
+          <button class="wlink" data-w="local">${ic('M12 2 3 7v10l9 5 9-5V7l-9-5zm0 2.3 6.7 3.7L12 11.7 5.3 8 12 4.3z')}Run a model locally<kbd>Ctrl Shift M</kbd></button>
           <button class="wlink" data-w="unsloth">${ic('M12 2l2.4 5.6L20 10l-5.6 2.4L12 18l-2.4-5.6L4 10l5.6-2.4z')}Connect Unsloth Studio<kbd>:8888</kbd></button>
           <button class="wlink" data-w="models">${ic('M7 14a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm5.6-4A6 6 0 1 0 12.6 14H17v4h4v-4h2v-4H12.6z')}Add API keys</button>
-          <button class="wlink" data-w="agent">${ic('M20 19V7H4v12h16M9.6 13 5.6 9h2.8l4 4-4 4H5.6l4-4z')}Configure coding agent</button>
           <button class="wlink" data-w="privacy">${ic('M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3z')}Review privacy controls</button>
         </div>
       </div>
@@ -135,7 +145,7 @@
       </div></div>`;
     $$('#welcome [data-w]').forEach((b) => (b.onclick = () => ({
       open: () => U.explorer.openFolder(), palette: () => U.palette.open('files'), cmd: () => U.palette.open('cmd'), ai: () => bus.emit('ai:focus'),
-      unsloth: () => U.settingsUI.open('unsloth'), models: () => U.settingsUI.open('models'), agent: () => U.settingsUI.open('agent'), privacy: () => U.settingsUI.open('privacy')
+      local: () => showView('models', true), unsloth: () => U.settingsUI.open('unsloth'), models: () => U.settingsUI.open('models'), agent: () => U.settingsUI.open('agent'), privacy: () => U.settingsUI.open('privacy')
     })[b.dataset.w]()));
   }
 
@@ -159,13 +169,13 @@
   function saveLayout() {
     try {
       const cs = document.documentElement.style;
-      localStorage.setItem('umbra.layout', JSON.stringify({ sw: cs.getPropertyValue('--sidebar-w'), aw: cs.getPropertyValue('--ai-w'), ph: cs.getPropertyValue('--panel-h'),
+      localStorage.setItem('panurgos.layout', JSON.stringify({ sw: cs.getPropertyValue('--sidebar-w'), aw: cs.getPropertyValue('--ai-w'), ph: cs.getPropertyValue('--panel-h'),
         sb: $('#sidebar').classList.contains('collapsed'), pn: $('#panel').classList.contains('collapsed'), ai: $('#ai').classList.contains('collapsed') }));
     } catch {}
   }
   function restoreLayout() {
     try {
-      const l = JSON.parse(localStorage.getItem('umbra.layout') || 'null'); if (!l) return;
+      const l = JSON.parse(localStorage.getItem('panurgos.layout') || 'null'); if (!l) return;
       const cs = document.documentElement.style;
       if (l.sw) cs.setProperty('--sidebar-w', l.sw); if (l.aw) cs.setProperty('--ai-w', l.aw); if (l.ph) cs.setProperty('--panel-h', l.ph);
       if (l.sb) U.toggle('sidebar', false); if (l.pn) U.toggle('panel', false); if (l.ai) U.toggle('ai', false);
@@ -181,6 +191,7 @@
     else if (!e.shiftKey && k === 'p') go(() => U.palette.open('files'));
     else if (e.shiftKey && k === 'e') go(() => showView('explorer'));
     else if (e.shiftKey && k === 'f') go(() => showView('search'));
+    else if (e.shiftKey && k === 'm') go(() => showView('models'));
     else if (e.altKey && k === 'b') go(() => U.toggle('ai'));
     else if (k === 'b') go(() => U.toggle('sidebar'));
     else if (k === 'j' || k === '`') go(() => U.toggle('panel'));
@@ -194,9 +205,9 @@
 
   // ---------------------------------------------------------------- boot
   document.addEventListener('DOMContentLoaded', async () => {
-    $('#w-min').onclick = () => umbra.win.minimize();
-    $('#w-max').onclick = () => umbra.win.maximize();
-    $('#w-close').onclick = () => umbra.win.close();
+    $('#w-min').onclick = () => panurgos.win.minimize();
+    $('#w-max').onclick = () => panurgos.win.maximize();
+    $('#w-close').onclick = () => panurgos.win.close();
     $('#tb-search').onclick = () => U.palette.open('files');
     $('#privacy-pill').onclick = () => { showView('shield'); U.showPanel('ledger'); };
     $('#st-shield').onclick = () => U.settingsUI.open('privacy');
@@ -213,9 +224,14 @@
     $$('.menus button').forEach((b) => b.addEventListener('mouseenter', () => { if ($('.menus button.open') && !b.classList.contains('open')) b.click(); }));
 
     initResizers(); restoreLayout();
-    state.appInfo = await umbra.app.info();
+    state.appInfo = await panurgos.app.info();
+    document.body.classList.add('platform-' + state.appInfo.platform);
     await U.settingsUI.load();
-    U.explorer.setWorkspace(await umbra.fs.restore());
+    // A path from Explorer's “Open with PanUrgos Studio” or the `panurgos <path>` command wins over the last workspace.
+    const opened = await panurgos.app.pendingOpen();
+    U.explorer.setWorkspace(opened || await panurgos.fs.restore());
+    if (opened?.file) U.editor.ready.then(() => U.editor.open(opened.file));
+    panurgos.app.onOpen((p) => { U.explorer.setWorkspace(p); if (p.file) U.editor.open(p.file); });
     await U.editor.ready;
     U.chat.renderChips();
     U.checkModel();

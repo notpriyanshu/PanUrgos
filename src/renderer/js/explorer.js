@@ -19,17 +19,17 @@ U.explorer = (() => {
   }
 
   async function openFolder() {
-    const ws = await umbra.fs.openFolder();
+    const ws = await panurgos.fs.openFolder();
     if (ws) setWorkspace(ws);
   }
 
   async function refresh() {
     if (!state.workspace) return;
-    const fresh = await umbra.fs.tree();
+    const fresh = await panurgos.fs.tree();
     // re-load expanded dirs deeper than first level
     const fill = async (nodes) => {
       for (const n of nodes) if (n.type === 'dir' && expanded.has(n.path)) {
-        if (!n.children) n.children = await umbra.fs.readDir(n.path);
+        if (!n.children) n.children = await panurgos.fs.readDir(n.path);
         await fill(n.children);
       }
     };
@@ -60,7 +60,7 @@ U.explorer = (() => {
     selected = n.path;
     if (n.type === 'dir') {
       if (expanded.has(n.path)) expanded.delete(n.path);
-      else { expanded.add(n.path); if (!n.children) n.children = await umbra.fs.readDir(n.path); }
+      else { expanded.add(n.path); if (!n.children) n.children = await panurgos.fs.readDir(n.path); }
       render();
     } else { render(); U.editor.open(n.path); }
   }
@@ -78,7 +78,7 @@ U.explorer = (() => {
     if (!name) return;
     const p = join(base, name.replace(/\//g, base.includes('\\') ? '\\' : '/'));
     try {
-      await umbra.fs.create(p, isDir);
+      await panurgos.fs.create(p, isDir);
       expanded.add(base);
       await refresh();
       if (!isDir) U.editor.open(p);
@@ -88,11 +88,11 @@ U.explorer = (() => {
     const name = await ask('Rename', n.name);
     if (!name || name === n.name) return;
     const to = join(dirname(n.path), name);
-    try { await umbra.fs.rename(n.path, to); U.editor.renamePath(n.path, to); await refresh(); } catch (e) { toast(clean(e), 'bad'); }
+    try { await panurgos.fs.rename(n.path, to); U.editor.renamePath(n.path, to); await refresh(); } catch (e) { toast(clean(e), 'bad'); }
   }
   async function del(n) {
     if (!(await confirm(`Move "${n.name}" to the trash?`, 'You can restore it from your system trash.', 'Move to Trash', true))) return;
-    try { if (U.editor.tabs().some((t) => t.path === n.path)) await U.editor.close(n.path); await umbra.fs.delete(n.path); await refresh(); } catch (e) { toast(clean(e), 'bad'); }
+    try { if (U.editor.tabs().some((t) => t.path === n.path)) await U.editor.close(n.path); await panurgos.fs.delete(n.path); await refresh(); } catch (e) { toast(clean(e), 'bad'); }
   }
   const clean = (e) => String(e.message || e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
 
@@ -103,7 +103,7 @@ U.explorer = (() => {
     items.push(['Rename…', () => rename(n)], ['Delete', () => del(n)], '-',
       ['Copy Path', () => navigator.clipboard.writeText(n.path)],
       ['Copy Relative Path', () => navigator.clipboard.writeText(n.path.slice(state.workspace.root.length + 1))],
-      ['Reveal in File Explorer', () => umbra.fs.reveal(n.path)]);
+      ['Reveal in File Explorer', () => panurgos.fs.reveal(n.path)]);
     U.showMenu(e.clientX, e.clientY, items);
   }
 
@@ -112,7 +112,7 @@ U.explorer = (() => {
     const box = $('#search-results'); box.innerHTML = '';
     if (!q || q.length < 2) return;
     if (!state.workspace) { box.innerHTML = '<div class="pad muted">Open a folder to search.</div>'; return; }
-    const hits = await umbra.fs.search(q);
+    const hits = await panurgos.fs.search(q);
     if (!hits.length) { box.innerHTML = '<div class="pad muted">No results.</div>'; return; }
     const byFile = {};
     hits.forEach((h) => (byFile[h.rel] ||= []).push(h));

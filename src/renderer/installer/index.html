@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'" />
+  <title>PanUrgos Studio Setup</title>
+  <link rel="stylesheet" href="installer.css" />
+</head>
+<body>
+<div id="app">
+  <header class="titlebar">
+    <div class="tb-brand"><svg viewBox="0 0 32 32"><defs><linearGradient id="lg0" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs><path d="M16 2 4 8v8c0 7 5.2 12.4 12 14 6.8-1.6 12-7 12-14V8L16 2z" fill="url(#lg0)"/></svg>PanUrgos Studio Setup</div>
+    <div class="tb-ctl"><button id="tb-min" title="Minimize">—</button><button id="tb-close" class="close" title="Close">✕</button></div>
+  </header>
+
+  <div class="shell">
+    <!-- ======================= left rail ======================= -->
+    <aside class="rail">
+      <div class="rail-brand">
+        <svg class="rail-logo" viewBox="0 0 32 32"><defs><linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs><path d="M16 2 4 8v8c0 7 5.2 12.4 12 14 6.8-1.6 12-7 12-14V8L16 2z" fill="url(#lg1)"/></svg>
+        <div><b>PanUrgos Studio</b><span id="rail-version">Setup</span></div>
+      </div>
+      <ol class="steps" id="steps">
+        <li data-step="welcome"><i></i><span>License agreement</span></li>
+        <li data-step="system"><i></i><span>System check</span></li>
+        <li data-step="location"><i></i><span>Install location</span></li>
+        <li data-step="components"><i></i><span>Components</span></li>
+        <li data-step="ready"><i></i><span>Ready to install</span></li>
+        <li data-step="install"><i></i><span>Installing</span></li>
+        <li data-step="finish"><i></i><span>Finish</span></li>
+      </ol>
+      <div class="rail-foot">
+        <div class="pill-ok">● No telemetry</div>
+        <span>Setup never sends data about you or your PC.</span>
+      </div>
+    </aside>
+
+    <!-- ======================= pages ======================= -->
+    <main class="stage">
+      <!-- 1. welcome + license -->
+      <section class="page" data-page="welcome">
+        <div class="hero">
+          <div class="eyebrow">Welcome</div>
+          <h1>Keep your code <span class="grad">private.</span></h1>
+          <p class="lead">PanUrgos Studio is an AI code editor that runs language models on your own hardware. This wizard will check your PC, let you choose components, and set everything up.</p>
+        </div>
+        <div class="license-box" id="license"></div>
+        <label class="check-line"><input type="checkbox" id="accept" /><span class="cbx"></span>I accept the license agreement and the third-party terms above</label>
+      </section>
+
+      <!-- 2. system check -->
+      <section class="page" data-page="system">
+        <div class="eyebrow">Step 2 of 7</div>
+        <h2>System check</h2>
+        <p class="lead small">Setup is inspecting this PC so it can recommend the right acceleration and components.</p>
+        <div class="scan" id="scan"></div>
+        <div class="verdict hidden" id="verdict"></div>
+      </section>
+
+      <!-- 3. location -->
+      <section class="page" data-page="location">
+        <div class="eyebrow">Step 3 of 7</div>
+        <h2>Install location</h2>
+        <p class="lead small">PanUrgos Studio installs for your account only, so no administrator rights are needed.</p>
+        <div class="field">
+          <label>Destination folder</label>
+          <div class="path-row"><input id="dir" spellcheck="false" /><button class="btn" id="browse">Browse…</button></div>
+        </div>
+        <div class="space">
+          <div class="space-bar"><i id="space-used"></i><b id="space-need"></b></div>
+          <div class="space-legend"><span><i class="sw a"></i>Required <b id="need-txt">—</b></span><span><i class="sw b"></i>Available <b id="free-txt">—</b></span></div>
+        </div>
+        <div id="loc-notes"></div>
+        <div class="info-card">
+          <div><b>Your settings and models are stored separately</b><span>%APPDATA%\PanUrgos Studio, so they're kept when you upgrade or reinstall.</span></div>
+        </div>
+      </section>
+
+      <!-- 4. components -->
+      <section class="page" data-page="components">
+        <div class="eyebrow">Step 4 of 7</div>
+        <h2>Choose components</h2>
+        <p class="lead small">Required parts are always installed. Anything already on your PC is detected and skipped.</p>
+        <div class="comp-scroll" id="components"></div>
+        <div class="comp-total" id="comp-total"></div>
+      </section>
+
+      <!-- 5. ready -->
+      <section class="page" data-page="ready">
+        <div class="eyebrow">Step 5 of 7</div>
+        <h2>Ready to install</h2>
+        <p class="lead small">Review your choices. Click <b>Install</b> to begin.</p>
+        <div class="summary" id="summary"></div>
+      </section>
+
+      <!-- 6. install: cinematic -->
+      <section class="page page-install" data-page="install">
+        <div class="cinema" id="cinema"></div>
+        <div class="install-hud">
+          <div class="hud-top">
+            <div class="hud-step" id="hud-step">Preparing…</div>
+            <div class="hud-pct" id="hud-pct">0%</div>
+          </div>
+          <div class="hud-bar"><i id="hud-bar"></i><b class="hud-glow"></b></div>
+          <div class="hud-bottom">
+            <div class="hud-checks" id="hud-checks"></div>
+            <button class="link" id="toggle-log">Show details</button>
+          </div>
+          <pre class="log hidden" id="log"></pre>
+        </div>
+      </section>
+
+      <!-- 7. finish -->
+      <section class="page" data-page="finish">
+        <div class="finish-mark" id="finish-mark"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24"/><path d="M15 27l7 7 15-16"/></svg></div>
+        <h1 class="finish-title" id="finish-title">PanUrgos Studio is ready.</h1>
+        <p class="lead" id="finish-lead">Your editor, your models, your machine.</p>
+        <div class="results" id="results"></div>
+        <label class="check-line"><input type="checkbox" id="launch" checked /><span class="cbx"></span>Launch PanUrgos Studio</label>
+        <div class="finish-tip">Tip: open any folder from a terminal with <code>panurgos .</code></div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="footer" id="footer">
+    <span class="foot-note" id="foot-note">PanUrgos Studio Setup</span>
+    <div class="foot-btns">
+      <button class="btn ghost" id="back">Back</button>
+      <button class="btn primary" id="next">Next</button>
+      <button class="btn ghost" id="cancel">Cancel</button>
+    </div>
+  </footer>
+</div>
+<script src="installer.js"></script>
+</body>
+</html>

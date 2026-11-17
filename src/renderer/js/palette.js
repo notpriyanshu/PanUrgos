@@ -15,6 +15,10 @@ U.palette = (() => {
     ['AI: New Chat Session', '', () => U.chat.reset()],
     ['AI: Edit Selection with AI', 'Ctrl+K', () => U.editor.openInlineEdit()],
     ['AI: Switch Model / Provider', '', () => U.pickModel()],
+    ['Models: Browse Hugging Face', 'Ctrl+Shift+M', () => U.showView('models')],
+    ['Models: Install / Update llama.cpp', '', () => U.models.install()],
+    ['Models: Unload Local Model', '', () => panurgos.runtime.stop()],
+    ['Models: Local Runtime Settings', '', () => U.settingsUI.open('runtime')],
     ['AI: Configure Unsloth', '', () => U.settingsUI.open('unsloth')],
     ['AI: Manage API Keys', '', () => U.settingsUI.open('models')],
     ['Privacy: Settings', '', () => U.settingsUI.open('privacy')],
@@ -24,7 +28,7 @@ U.palette = (() => {
       await U.settingsUI.patch({ privacy: { localOnly: v } });
       if (v && !state.presets[state.settings.activeProvider].local) await U.settingsUI.patch({ activeProvider: 'unsloth' }, true);
     }],
-    ['Privacy: Clear Network Ledger', '', () => umbra.ledger.clear()],
+    ['Privacy: Clear Network Ledger', '', () => panurgos.ledger.clear()],
     ['Preferences: Open Settings', 'Ctrl+,', () => U.settingsUI.open()],
     ['Terminal: Focus', 'Ctrl+`', () => { U.showPanel('terminal'); $('#term-input').focus(); }]
   ].map(([label, key, run]) => ({ label, key, run, kind: 'cmd' }));
@@ -34,7 +38,7 @@ U.palette = (() => {
     const inp = $('#palette-input');
     inp.value = mode === 'cmd' ? '>' : '';
     inp.placeholder = 'Search files by name — type > for commands';
-    if (mode === 'files' && state.workspace) files = await umbra.fs.allFiles();
+    if (mode === 'files' && state.workspace) files = await panurgos.fs.allFiles();
     inp.focus(); update();
   }
   function close() { $('#palette').classList.add('hidden'); }

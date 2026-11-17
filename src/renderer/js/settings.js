@@ -10,17 +10,18 @@ U.settingsUI = (() => {
     agent: '<path d="M20 19V7H4v12h16m0-16a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h16m-7 14v-2h5v2h-5m-3.42-4L5.57 9H8.4l3.3 3.3c.39.39.39 1.03 0 1.42L8.42 17H5.59l4-4z"/>',
     privacy: '<path d="M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3zm0 10.9h6c-.5 3.7-3 7-6 7.9V12H6V6.3l6-2.2v8.8z"/>',
     editor: '<path d="M9.4 16.6 4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0 4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/>',
-    about: '<path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/>'
+    about: '<path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/>',
+    runtime: '<path d="M12 2 3 7v10l9 5 9-5V7l-9-5zm0 2.3 6.7 3.7L12 11.7 5.3 8 12 4.3zM5 9.7l6 3.3v6.6l-6-3.3V9.7zm8 9.9V13l6-3.3v6.6l-6 3.3z"/>'
   };
-  const NAV = [['models', 'Models & API Keys'], ['unsloth', 'Unsloth Agents'], ['agent', 'Coding Agent'], ['privacy', 'Privacy & Security'], ['editor', 'Editor'], ['about', 'About']];
+  const NAV = [['models', 'Models & API Keys'], ['runtime', 'Local Runtime'], ['unsloth', 'Unsloth Agents'], ['agent', 'Coding Agent'], ['privacy', 'Privacy & Security'], ['editor', 'Editor'], ['about', 'About']];
 
   async function load() {
-    const r = await umbra.settings.get();
+    const r = await panurgos.settings.get();
     state.settings = r.settings; state.presets = r.presets; state.secrets = r.secrets;
     bus.emit('settings', state.settings);
   }
   async function patch(p, quiet) {
-    state.settings = await umbra.settings.set(p);
+    state.settings = await panurgos.settings.set(p);
     bus.emit('settings', state.settings);
     if (!quiet) flash();
   }
@@ -56,7 +57,7 @@ U.settingsUI = (() => {
         html: `<svg viewBox="0 0 24 24">${ICONS[id]}</svg>${esc(label)}` })));
     const main = el('div', { class: 'set-main' },
       el('button', { class: 'icon-btn set-close', title: 'Close (Esc)', onclick: close, html: '<svg viewBox="0 0 24 24"><path d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg>' }));
-    ({ models: pModels, unsloth: pUnsloth, agent: pAgent, privacy: pPrivacy, editor: pEditor, about: pAbout })[page](main);
+    ({ models: pModels, runtime: pRuntime, unsloth: pUnsloth, agent: pAgent, privacy: pPrivacy, editor: pEditor, about: pAbout })[page](main);
     root.append(el('div', { class: 'settings-box' }, nav, main));
     root.onclick = (e) => { if (e.target === root) close(); };
   }
@@ -78,15 +79,23 @@ U.settingsUI = (() => {
     m.append(grid);
 
     const id = editing; const p = state.presets[id]; const cfg = s.providers[id] || {};
+    if (p.builtin) {
+      m.append(section(`${esc(p.label)} <span class="muted small" style="font-weight:400">— ${esc(p.hint)}</span>`,
+        row('Use as active model', 'Routes chat, agent, and Ctrl+K edits to the built-in runtime.',
+          s.activeProvider === id ? el('span', { class: 'tag local' }, 'ACTIVE')
+            : el('button', { class: 'btn sm primary', onclick: () => { patch({ activeProvider: id }); render(); U.checkModel(); } }, 'Make active')),
+        row('Models', 'Search Hugging Face, download GGUF models, and load them.', el('button', { class: 'btn sm', onclick: () => { close(); U.showView('models'); } }, 'Open Models panel')),
+        row('Runtime', 'llama.cpp version, GPU backend, updates and performance.', el('button', { class: 'btn sm', onclick: () => { page = 'runtime'; render(); } }, 'Local Runtime settings'))));
+    } else {
     const result = el('div', { class: 'test-result' });
     const modelInput = input(cfg.model, (v) => patch({ providers: { [id]: { model: v } } }), { placeholder: 'model id', list: 'model-list' });
     const dl = el('datalist', { id: 'model-list' });
     const keyInput = el('input', { class: 'input', type: 'password', placeholder: state.secrets[id]?.set ? `Saved ${state.secrets[id].hint} — type to replace` : (p.needsKey ? 'sk-…' : 'optional'), autocomplete: 'off', spellcheck: 'false' });
     const saveKey = el('button', { class: 'btn sm', onclick: async () => {
-      try { state.secrets = await umbra.settings.setSecret(id, keyInput.value.trim()); keyInput.value = ''; toast(`Key for ${p.label} encrypted & stored`, 'ok'); render(); }
+      try { state.secrets = await panurgos.settings.setSecret(id, keyInput.value.trim()); keyInput.value = ''; toast(`Key for ${p.label} encrypted & stored`, 'ok'); render(); }
       catch (e) { toast(clean(e), 'bad'); }
     } }, 'Save');
-    const clearKey = el('button', { class: 'btn sm ghost', onclick: async () => { state.secrets = await umbra.settings.setSecret(id, ''); toast('Key removed', 'ok'); render(); } }, 'Remove');
+    const clearKey = el('button', { class: 'btn sm ghost', onclick: async () => { state.secrets = await panurgos.settings.setSecret(id, ''); toast('Key removed', 'ok'); render(); } }, 'Remove');
 
     m.append(section(`${esc(p.label)} <span class="muted small" style="font-weight:400">— ${esc(p.hint)}</span>`,
       row('Use as active model', 'Routes chat, agent, and Ctrl+K edits to this provider.',
@@ -96,7 +105,7 @@ U.settingsUI = (() => {
       row('Model', 'Exact model id the server expects. Use “Fetch” to list.', el('div', { style: 'display:flex;gap:6px;width:100%' }, modelInput, dl,
         el('button', { class: 'btn sm', onclick: async () => {
           result.className = 'test-result'; result.textContent = 'Fetching models…';
-          try { const list = await umbra.llm.models(id); dl.innerHTML = list.map((x) => `<option value="${esc(x)}">`).join('');
+          try { const list = await panurgos.llm.models(id); dl.innerHTML = list.map((x) => `<option value="${esc(x)}">`).join('');
             result.className = 'test-result ok'; result.textContent = `${list.length} model(s): ${list.slice(0, 6).join(', ')}${list.length > 6 ? '…' : ''}`;
             if (!cfg.model && list[0]) { modelInput.value = list[0]; patch({ providers: { [id]: { model: list[0] } } }); }
           } catch (e) { result.className = 'test-result bad'; result.textContent = clean(e); }
@@ -105,9 +114,10 @@ U.settingsUI = (() => {
         el('div', { style: 'display:flex;gap:6px;width:100%' }, keyInput, saveKey, state.secrets[id]?.set ? clearKey : null)),
       row('Connection', '', el('div', { style: 'text-align:right' }, el('button', { class: 'btn sm', onclick: async () => {
         result.className = 'test-result'; result.textContent = 'Testing…';
-        try { const r = await umbra.llm.test(id); result.className = 'test-result ok'; result.textContent = `✓ Connected in ${r.ms} ms — ${r.models.length} model(s) available`; }
+        try { const r = await panurgos.llm.test(id); result.className = 'test-result ok'; result.textContent = `✓ Connected in ${r.ms} ms — ${r.models.length} model(s) available`; }
         catch (e) { result.className = 'test-result bad'; result.textContent = '✗ ' + clean(e); }
       } }, 'Test connection'), result))));
+    }
 
     m.append(section('Sampling',
       row('Temperature', 'Higher = more creative.', input(s.sampling.temperature, (v) => patch({ sampling: { temperature: v } }), { type: 'number', step: '0.05', min: '0', max: '2' })),
@@ -115,11 +125,61 @@ U.settingsUI = (() => {
       row('Max tokens', 'Upper bound per response.', input(s.sampling.max_tokens, (v) => patch({ sampling: { max_tokens: v } }), { type: 'number', step: '128', min: '64' }))));
   }
 
+  // ---------------------------------------------------------------- LOCAL RUNTIME
+  async function pRuntime(m) {
+    const s = state.settings; const l = s.local;
+    const rt = U.models?.status() || await panurgos.runtime.status();
+    const bl = U.models.backendLabel;
+    const hw = rt.hardware || {};
+    const gpu = hw.gpus?.[0];
+    m.append(el('h2', {}, 'Local Runtime'),
+      el('p', { class: 'lede', html: 'PanUrgos runs models itself with <b>llama.cpp</b>, downloaded from the official ggml-org builds and verified by SHA-256. It listens only on 127.0.0.1.' }));
+
+    const options = ['auto', ...['cuda-13.5', 'cuda-12.4', 'cuda-12.8', 'vulkan', 'cpu', 'metal'].filter((b) => rt.backend === b || backendsFor().includes(b))];
+    const sel = el('select', { class: 'input' }, options.map((b) => el('option', { value: b, selected: l.backend === b }, b === 'auto' ? `Auto (${bl(rt.backend)} on this PC)` : bl(b))));
+    sel.onchange = async () => { await patch({ local: { backend: sel.value } }); toast('Backend changed — install the matching build from the Models panel.', '', 5000); render(); };
+
+    const inst = rt.active;
+    const updateBtn = el('button', { class: 'btn sm', onclick: async () => { await U.models.check(); render(); } }, 'Check for updates');
+    const installBtn = el('button', { class: 'btn sm primary', onclick: async () => { await U.models.install(); render(); } }, inst ? (rt.update?.available ? `Update to ${rt.update.tag}` : 'Reinstall') : 'Install llama.cpp');
+    m.append(section('llama.cpp',
+      row('Installed build', inst ? `Installed ${new Date(inst.installedAt).toLocaleDateString()}` : 'Not installed yet.',
+        el('span', { class: `tag ${inst ? 'local' : 'blocked'}` }, inst ? `${inst.tag} · ${bl(inst.backend)}` : 'NONE')),
+      row('This machine', '', el('span', { class: 'muted small', style: 'text-align:right' }, `${gpu ? `${gpu.name}, ${(gpu.vramMB / 1024).toFixed(0)} GB VRAM${hw.cuda ? `, CUDA ${hw.cuda}` : ''}` : 'No NVIDIA GPU'} · ${(hw.ramMB / 1024).toFixed(0)} GB RAM`)),
+      row('GPU backend', 'Auto picks CUDA on NVIDIA, then Vulkan, then CPU.', sel),
+      row('Updates', rt.update ? `Latest compatible build: ${rt.update.tag}` : 'Contacts github.com only when you allow it.', el('div', { style: 'display:flex;gap:6px' }, updateBtn, installBtn)),
+      row('Check on launch', 'Look for a newer build when PanUrgos starts (needs “llama.cpp updates” allowed under Privacy).', toggle(l.checkOnLaunch, (v) => patch({ local: { checkOnLaunch: v } }))),
+      row('Install updates automatically', 'Download new builds in the background. They take effect the next time a model loads.', toggle(l.autoUpdate, (v) => patch({ local: { autoUpdate: v } }))),
+      rt.previous?.length ? row('Roll back', 'Switch to the build you had before the last update.', el('button', { class: 'btn sm', onclick: async () => { try { await panurgos.runtime.rollback(rt.previous[0].id); toast(`Rolled back to ${rt.previous[0].tag}`, 'ok'); render(); } catch (e) { toast(clean(e), 'bad'); } } }, `Use ${rt.previous[0].tag}`)) : null));
+
+    m.append(section('Performance <span class="muted small" style="font-weight:400">— applied the next time a model loads</span>',
+      row('GPU layers', '999 = offload everything that fits. Lower it if you run out of GPU memory.', input(l.gpuLayers, (v) => patch({ local: { gpuLayers: v } }), { type: 'number', min: '0', max: '999' })),
+      row('Context size', 'Tokens the model can see at once. Larger uses more memory.', input(l.ctxSize, (v) => patch({ local: { ctxSize: v } }), { type: 'number', step: '1024', min: '1024' })),
+      row('CPU threads', '0 = let llama.cpp decide.', input(l.threads, (v) => patch({ local: { threads: v } }), { type: 'number', min: '0', max: '128' })),
+      row('Extra arguments', 'Advanced: passed straight to llama-server.', input(l.extraArgs, (v) => patch({ local: { extraArgs: v } }), { placeholder: 'e.g. --flash-attn on' }))));
+
+    const lib = await panurgos.models.list();
+    const hfKey = el('input', { class: 'input', type: 'password', autocomplete: 'off', spellcheck: 'false', placeholder: state.secrets.huggingface?.set ? `Saved ${state.secrets.huggingface.hint} — type to replace` : 'hf_… (only for gated models)' });
+    m.append(section('Model library',
+      row('Download folder', '', el('div', { style: 'display:flex;gap:6px;align-items:center;justify-content:flex-end;width:100%' },
+        el('code', { style: 'font:11px var(--mono);color:var(--fg-2);word-break:break-all;text-align:right' }, lib.dir),
+        el('button', { class: 'btn sm', onclick: async () => { const d = await panurgos.models.chooseDir(); if (d) { await load(); render(); U.models.listLocal(); } } }, 'Change…'))),
+      row('Find models from other apps', 'Also list GGUFs already downloaded by LM Studio and the Hugging Face cache, so you don’t download twice.', toggle(l.scanOtherApps, async (v) => { await patch({ local: { scanOtherApps: v } }); U.models.listLocal(); })),
+      row('Hugging Face token', 'Optional. Encrypted with your OS keychain; sent only to huggingface.co.', el('div', { style: 'display:flex;gap:6px;width:100%' }, hfKey,
+        el('button', { class: 'btn sm', onclick: async () => { try { state.secrets = await panurgos.settings.setSecret('huggingface', hfKey.value.trim()); toast('Hugging Face token stored', 'ok'); render(); } catch (e) { toast(clean(e), 'bad'); } } }, 'Save')))));
+  }
+  function backendsFor() {
+    const plat = state.appInfo?.platform;
+    if (plat === 'darwin') return ['metal'];
+    if (plat === 'win32') return ['cuda-13.5', 'cuda-12.4', 'vulkan', 'cpu'];
+    return ['cuda-13.5', 'cuda-12.8', 'vulkan', 'cpu'];
+  }
+
   // ---------------------------------------------------------------- UNSLOTH
   function pUnsloth(m) {
     const s = state.settings; const u = s.unsloth; const cfg = s.providers.unsloth;
     m.append(el('h2', {}, 'Unsloth Agents'),
-      el('p', { class: 'lede', html: 'Umbra speaks the Unsloth Studio inference API natively — including server-side thinking and agent tools. Point it at your local Unsloth server and pick which tools the model may use.' }));
+      el('p', { class: 'lede', html: 'PanUrgos speaks the Unsloth Studio inference API natively — including server-side thinking and agent tools. Point it at your local Unsloth server and pick which tools the model may use.' }));
     const toolChips = el('div', { class: 'chips-input' }, ['web_search', 'python', 'terminal'].map((t) => {
       const cb = el('input', { type: 'checkbox' }); cb.checked = u.enabled_tools.includes(t);
       cb.onchange = () => { const set = new Set(state.settings.unsloth.enabled_tools); cb.checked ? set.add(t) : set.delete(t); patch({ unsloth: { enabled_tools: [...set] } }); };
@@ -144,7 +204,7 @@ U.settingsUI = (() => {
       row('Enabled tools', '<span style="color:var(--warn)">web_search contacts the internet from the Unsloth server.</span>', toolChips),
       row('permission_mode', 'Passed through to Unsloth as-is.', permSel)));
     const snippet = `from openai import OpenAI\n\nclient = OpenAI(base_url="${cfg.baseUrl}", api_key="sk-unsloth-…")\nresp = client.chat.completions.create(\n    model="${cfg.model || 'YOUR_MODEL'}",\n    messages=[{"role": "user", "content": "…"}],\n    temperature=${s.sampling.temperature}, top_p=${s.sampling.top_p}, max_tokens=${s.sampling.max_tokens},\n    extra_body={\n        "top_k": ${u.top_k}, "min_p": ${u.min_p}, "repetition_penalty": ${u.repetition_penalty},\n        "enable_thinking": ${u.enable_thinking ? 'True' : 'False'}, "enable_tools": ${u.enable_tools ? 'True' : 'False'},\n        "enabled_tools": ${JSON.stringify(u.enabled_tools)}, "permission_mode": "${u.permission_mode}",\n    },\n    stream=True,\n)`;
-    m.append(section('Equivalent request <span class="muted small" style="font-weight:400">— this is exactly what Umbra sends</span>', el('pre', { class: 'code-snippet' }, snippet)));
+    m.append(section('Equivalent request <span class="muted small" style="font-weight:400">— this is exactly what PanUrgos sends</span>', el('pre', { class: 'code-snippet' }, snippet)));
   }
 
   // ---------------------------------------------------------------- AGENT
@@ -166,7 +226,7 @@ U.settingsUI = (() => {
   function pPrivacy(m) {
     const s = state.settings; const pv = s.privacy;
     m.append(el('h2', {}, 'Privacy & Security'),
-      el('p', { class: 'lede' }, 'Umbra is private by construction, not by policy. These are the guarantees and the controls.'),
+      el('p', { class: 'lede' }, 'PanUrgos is private by construction, not by policy. These are the guarantees and the controls.'),
       el('div', { class: 'pledge', html: [
         ['Zero telemetry', 'No analytics, crash reporting, or usage pings. There is no server to send them to.'],
         ['Sealed renderer', 'The UI is blocked from the network entirely; only the main process can reach model endpoints.'],
@@ -186,11 +246,14 @@ U.settingsUI = (() => {
         row('Attach active file', 'Include the open file as context with each prompt (toggleable per message).', toggle(pv.sendFileContext, (v) => patch({ privacy: { sendFileContext: v } }))),
         row('Remember chats', 'Off = conversations exist in memory only and vanish when you close the app.', toggle(pv.persistChats, (v) => patch({ privacy: { persistChats: v } }))),
         row('Block UI network access', 'Recommended. Disabling allows the renderer to load remote resources.', toggle(pv.blockRendererNetwork, (v) => patch({ privacy: { blockRendererNetwork: v } })))),
+      section('Internet access for models <span class="muted small" style="font-weight:400">— off until you allow it; never used for chats</span>',
+        row('Hugging Face', 'Lets PanUrgos search huggingface.co and download model files. Sends your search text and chosen model names only.', toggle(pv.allowHub, (v) => patch({ privacy: { allowHub: v } }))),
+        row('llama.cpp updates', 'Lets PanUrgos check github.com for new llama.cpp builds and download them. Sends no information about you or your code.', toggle(pv.allowUpdates, (v) => patch({ privacy: { allowUpdates: v } })))),
       el('div', { class: 'set-section danger-zone' }, el('h3', {}, 'Danger zone'),
         row('Panic wipe', 'Destroys all stored API keys, resets every setting and clears the network ledger. Your code files are not touched.',
           el('button', { class: 'btn danger sm', onclick: async () => {
-            if (!(await U.confirm('Wipe all keys and settings?', 'This permanently deletes every stored API key and resets Umbra to defaults. This cannot be undone.', 'Wipe everything', true))) return;
-            state.settings = await umbra.settings.wipe(); state.secrets = {};
+            if (!(await U.confirm('Wipe all keys and settings?', 'This permanently deletes every stored API key and resets PanUrgos to defaults. This cannot be undone.', 'Wipe everything', true))) return;
+            state.settings = await panurgos.settings.wipe(); state.secrets = {};
             try { localStorage.clear(); } catch {}
             U.chat.reset(); bus.emit('settings', state.settings); toast('All keys and settings wiped', 'ok'); render();
           } }, 'Wipe everything'))));
@@ -212,7 +275,7 @@ U.settingsUI = (() => {
 
   function pAbout(m) {
     const i = state.appInfo || {};
-    m.append(el('h2', {}, 'About Umbra Studio'), el('p', { class: 'lede' }, 'A private, local-first AI code editor.'),
+    m.append(el('h2', {}, 'About PanUrgos Studio'), el('p', { class: 'lede' }, 'A private, local-first AI code editor.'),
       section('Build',
         row('Version', '', el('span', {}, i.version || '')),
         row('Runtime', '', el('span', {}, `Electron ${i.electron} · ${i.platform}`)),

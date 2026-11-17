@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "website",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["build/tools/serve-website.js", "4173"],
+      "port": 4173
+    }
+  ]
+}

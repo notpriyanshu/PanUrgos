@@ -6,15 +6,17 @@ U.ledger = (() => {
   function render() {
     const items = data.items;
     const outbound = items.filter((i) => i.status !== 'blocked');
-    const cloud = outbound.filter((i) => !i.local);
+    // "cloud" = prompts sent to a remote model. Hub/update traffic (downloads only) is counted separately.
+    const cloud = outbound.filter((i) => !i.local && !i.scope);
+    const hub = outbound.filter((i) => i.scope);
     $('#ledger-count').textContent = items.length;
-    $('#st-net').textContent = `${outbound.length} outbound${cloud.length ? ` (${cloud.length} cloud)` : ''} · ${data.blocked} blocked`;
+    $('#st-net').textContent = `${outbound.length} outbound${cloud.length ? ` (${cloud.length} cloud)` : ''}${hub.length ? ` · ${hub.length} download` : ''} · ${data.blocked} blocked`;
     const v = $('#ledger-view');
     if (!items.length) {
-      v.innerHTML = '<div class="ledger-empty">No network activity yet. Umbra makes <b>zero</b> requests on its own — no telemetry, no update pings, no crash reports.<br>Only the model endpoints you configure are ever contacted, and each call appears here.</div>';
+      v.innerHTML = '<div class="ledger-empty">No network activity yet. PanUrgos makes <b>zero</b> requests on its own — no telemetry, no update pings, no crash reports.<br>Only the model endpoints you configure are ever contacted, and each call appears here.</div>';
     } else {
       v.innerHTML = `<table><thead><tr><th>TIME</th><th>SCOPE</th><th>METHOD</th><th>HOST</th><th>PURPOSE</th><th>SENT</th><th>STATUS</th><th>LATENCY</th></tr></thead><tbody>${
-        items.map((i) => `<tr><td>${timeAgo(i.ts)}</td><td><span class="tag ${i.status === 'blocked' ? 'blocked' : i.local ? 'local' : 'cloud'}">${i.status === 'blocked' ? 'BLOCKED' : i.local ? 'LOCAL' : 'CLOUD'}</span></td>` +
+        items.map((i) => `<tr><td>${timeAgo(i.ts)}</td><td><span class="tag ${i.status === 'blocked' ? 'blocked' : i.local ? 'local' : i.scope ? 'hub' : 'cloud'}">${i.status === 'blocked' ? 'BLOCKED' : i.local ? 'LOCAL' : i.scope === 'hub' ? 'HUB' : i.scope === 'updates' ? 'UPDATE' : 'CLOUD'}</span></td>` +
           `<td>${esc(i.method)}</td><td title="${esc(i.url)}">${esc(i.host)}</td><td>${esc(i.purpose || '')}${i.redactions ? ` <span class="tag local">${i.redactions} redacted</span>` : ''}</td>` +
           `<td>${i.bytesOut ? (i.bytesOut / 1024).toFixed(1) + ' KB' : '—'}</td><td>${esc(i.status)}${i.error ? ' · ' + esc(i.error) : ''}</td><td>${i.ms ? i.ms + ' ms' : '…'}</td></tr>`).join('')
       }</tbody></table>`;
@@ -46,8 +48,8 @@ U.ledger = (() => {
     $('#sh-settings').onclick = () => U.settingsUI.open('privacy');
   }
 
-  umbra.ledger.onUpdate((d) => { data = d; render(); });
-  document.addEventListener('DOMContentLoaded', async () => { data = await umbra.ledger.get(); render(); });
+  panurgos.ledger.onUpdate((d) => { data = d; render(); });
+  document.addEventListener('DOMContentLoaded', async () => { data = await panurgos.ledger.get(); render(); });
   U.bus.on('settings', renderShield);
   return { render };
 })();

@@ -1,0 +1,48 @@
+PANURGOS STUDIO — LICENSE AGREEMENT
+
+MIT License
+
+Copyright (c) 2026 PanUrgos
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+────────────────────────────────────────────────────────────────────────────
+
+THIRD-PARTY COMPONENTS
+
+PanUrgos Studio includes or installs the following components, each under its
+own license:
+
+• llama.cpp (ggml-org) — MIT License. Bundled as the local model runtime.
+• Electron — MIT License. Application framework (includes Chromium, BSD-style
+  licenses; see resources in the install folder).
+• Monaco Editor (Microsoft) — MIT License. Code editing engine.
+• Microsoft Visual C++ Redistributable — Microsoft Software License Terms.
+  Installed only if it is missing from your PC.
+• Optional developer runtimes (Git, Node.js, Python, .NET SDK, Eclipse
+  Temurin JDK, Rust) are installed through Windows Package Manager (winget)
+  from each publisher, under that publisher's license, only if you select them.
+
+AI models are not included. Models you download from Hugging Face are subject
+to the license stated on each model's page.
+
+PRIVACY
+
+PanUrgos Studio contains no telemetry. Setup does not send any information about
+you or your PC. Optional components contact only their official publishers.
