@@ -1,0 +1,15 @@
+{
+  "name": "panurgos-download-api",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Signup-gated installer downloads for panurgos.com (Cloudflare Worker + D1 + R2).",
+  "scripts": {
+    "dev": "wrangler dev --env dev --port 8787",
+    "db:local": "wrangler d1 execute panurgos-downloads --env dev --local --file schema.sql",
+    "db:remote": "wrangler d1 execute panurgos-downloads --remote --file schema.sql",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "4.163.0"
+  }
+}

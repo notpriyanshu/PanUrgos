@@ -8,3 +8,6 @@ build/redist/
 
 # Website (deployed from its own repo)
 website/
+
+# Cloudflare local state
+.wrangler/
