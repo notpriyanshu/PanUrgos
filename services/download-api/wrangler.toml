@@ -19,6 +19,19 @@ GITHUB_CLIENT_ID = "Ov23liUKpLhuWcWZXoO9"
 # Installers in the private R2 bucket. A platform missing here is "coming soon".
 INSTALLERS = '{"win":{"key":"1.0.0/PanUrgos-Studio-Setup-1.0.0.exe","file":"PanUrgos-Studio-Setup-1.0.0.exe","version":"1.0.0"},"mac":{"version":"1.0.0","variants":{"arm64":{"key":"1.0.0/PanUrgos-Studio-1.0.0-mac-arm64.dmg","file":"PanUrgos-Studio-1.0.0-mac-arm64.dmg","label":"Apple Silicon (M1–M4)","hint":"Macs from late 2020 on, including MacBook Air/Pro M-series, iMac, Mac mini and Mac Studio."},"x64":{"key":"1.0.0/PanUrgos-Studio-1.0.0-mac-x64.dmg","file":"PanUrgos-Studio-1.0.0-mac-x64.dmg","label":"Intel Mac","hint":"Older Macs with an Intel processor. Check: Apple menu → About This Mac → Chip/Processor."}}},"linux":{"version":"1.0.0","variants":{"appimage":{"key":"1.0.0/PanUrgos-Studio-1.0.0-linux-x86_64.AppImage","file":"PanUrgos-Studio-1.0.0-linux-x86_64.AppImage","label":"AppImage","hint":"Runs on most distributions: make it executable (chmod +x) and open it."},"deb":{"key":"1.0.0/PanUrgos-Studio-1.0.0-linux-amd64.deb","file":"PanUrgos-Studio-1.0.0-linux-amd64.deb","label":".deb (Ubuntu, Debian)","hint":"Installs system-wide with your package manager: sudo apt install ./PanUrgos-Studio-1.0.0-linux-amd64.deb"}}}}'
 
+# Enterprise call booking (panurgos.com/enterprise). Host timezone as a fixed UTC offset (IST = +330 minutes).
+BOOKING_TZ_NAME = "Asia/Kolkata"
+BOOKING_UTC_OFFSET_MIN = "330"
+# Days (0 = Sunday … 6 = Saturday) and hours in the host timezone, slot length, earliest/latest booking.
+BOOKING_DAYS = "1,2,3,4,5"
+BOOKING_HOURS = "10-18"
+BOOKING_SLOT_MIN = "30"
+BOOKING_MIN_LEAD_H = "24"
+BOOKING_MAX_DAYS = "21"
+# Video call link put in every invite (empty = "link to follow"), and where new-booking alerts go (empty = none).
+MEETING_URL = ""
+NOTIFY_EMAIL = ""
+
 [[d1_databases]]
 binding = "DB"
 database_name = "panurgos-downloads"
@@ -45,6 +58,19 @@ FROM_EMAIL = "PanUrgos <downloads@panurgos.com>"
 CONTACT_EMAIL = "privacy@example.test"
 INSTALLERS = '{"win":{"key":"1.0.0/PanUrgos-Studio-Setup-1.0.0.exe","file":"PanUrgos-Studio-Setup-1.0.0.exe","version":"1.0.0"},"mac":{"version":"1.0.0","variants":{"arm64":{"key":"1.0.0/PanUrgos-Studio-1.0.0-mac-arm64.dmg","file":"PanUrgos-Studio-1.0.0-mac-arm64.dmg","label":"Apple Silicon (M1–M4)","hint":"Macs from late 2020 on, including MacBook Air/Pro M-series, iMac, Mac mini and Mac Studio."},"x64":{"key":"1.0.0/PanUrgos-Studio-1.0.0-mac-x64.dmg","file":"PanUrgos-Studio-1.0.0-mac-x64.dmg","label":"Intel Mac","hint":"Older Macs with an Intel processor. Check: Apple menu → About This Mac → Chip/Processor."}}},"linux":{"version":"1.0.0","variants":{"appimage":{"key":"1.0.0/PanUrgos-Studio-1.0.0-linux-x86_64.AppImage","file":"PanUrgos-Studio-1.0.0-linux-x86_64.AppImage","label":"AppImage","hint":"Runs on most distributions: make it executable (chmod +x) and open it."},"deb":{"key":"1.0.0/PanUrgos-Studio-1.0.0-linux-amd64.deb","file":"PanUrgos-Studio-1.0.0-linux-amd64.deb","label":".deb (Ubuntu, Debian)","hint":"Installs system-wide with your package manager: sudo apt install ./PanUrgos-Studio-1.0.0-linux-amd64.deb"}}}}'
 DEV_LOG_EMAILS = "1"
+
+# Enterprise call booking (panurgos.com/enterprise). Host timezone as a fixed UTC offset (IST = +330 minutes).
+BOOKING_TZ_NAME = "Asia/Kolkata"
+BOOKING_UTC_OFFSET_MIN = "330"
+# Days (0 = Sunday … 6 = Saturday) and hours in the host timezone, slot length, earliest/latest booking.
+BOOKING_DAYS = "1,2,3,4,5"
+BOOKING_HOURS = "10-18"
+BOOKING_SLOT_MIN = "30"
+BOOKING_MIN_LEAD_H = "24"
+BOOKING_MAX_DAYS = "21"
+# Video call link put in every invite (empty = "link to follow"), and where new-booking alerts go (empty = none).
+MEETING_URL = ""
+NOTIFY_EMAIL = ""
 
 [[env.dev.d1_databases]]
 binding = "DB"

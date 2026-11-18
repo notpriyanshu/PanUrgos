@@ -31,6 +31,19 @@ CREATE TABLE IF NOT EXISTS tokens (
 );
 CREATE INDEX IF NOT EXISTS tokens_expiry ON tokens(expires_at);
 
+CREATE TABLE IF NOT EXISTS bookings (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  slot_start INTEGER NOT NULL UNIQUE,
+  name       TEXT    NOT NULL,
+  email      TEXT    NOT NULL,
+  company    TEXT    NOT NULL,
+  size       TEXT,
+  topic      TEXT,
+  tz         TEXT,
+  created_at INTEGER NOT NULL,
+  status     TEXT    NOT NULL DEFAULT 'booked'
+);
+
 CREATE TABLE IF NOT EXISTS downloads (
   id       INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id  INTEGER NOT NULL REFERENCES users(id),
